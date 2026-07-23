@@ -23,9 +23,6 @@ import { CopyEmail } from "./CopyEmail";
  * swallows a message.
  */
 
-const ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_KEY ?? "";
-const ENDPOINT = "https://api.web3forms.com/submit";
-
 const schema = z.object({
   name: z.string().trim().min(2, "Enter your name.").max(80),
   email: z.string().trim().email("Enter an email address I can reply to."),
@@ -151,32 +148,31 @@ export function ContactForm() {
       return;
     }
 
-    if (!ACCESS_KEY) {
-      setStatus("error");
-      setMessage(
-        "The form is not connected to a mailbox yet. Email me directly — the address is below and the button copies it.",
-      );
-      return;
-    }
-
     setStatus("sending");
+    
     try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          access_key: ACCESS_KEY,
-          from_name: parsed.data.name,
-          // Replies go to the sender, so answering from the inbox just works.
-          replyto: parsed.data.email,
-          subject: `[portfolio] ${parsed.data.subject}`,
-          name: parsed.data.name,
-          email: parsed.data.email,
-          message: parsed.data.body,
-        }),
-      });
+      const response = await fetch(
+        "https://contact-form.subham-bh.workers.dev",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: parsed.data.name,
+            email: parsed.data.email,
+            subject: parsed.data.subject,
+            message: parsed.data.body,
+          }),
+        },
+      );
 
-      if (!response.ok) throw new Error(String(response.status));
+      const result = await response.json();
+    
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? "Failed to send");
+      }
+    
       setStatus("sent");
     } catch {
       setStatus("error");
@@ -184,20 +180,6 @@ export function ContactForm() {
         "The message did not send. Email me directly — the address is below and the button copies it.",
       );
     }
-  };
-
-  if (status === "sent") {
-    return (
-      <div className="surface border border-signal/40 p-8">
-        <p className="label !text-signal">Sent</p>
-        <p className="font-display mt-4 text-h3">Message sent.</p>
-        <p className="prose-measure mt-3 text-fg-muted">
-          It lands in my inbox and replies go straight back to the address you gave. I
-          answer within a day, usually faster during IST working hours.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-8">
