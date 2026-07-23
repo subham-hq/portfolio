@@ -1,16 +1,55 @@
-import data from "@/content/github-stats.json";
+import raw from "@/content/github-stats.json";
 
 /**
  * GitHub statistics, rendered from a build-time snapshot.
  *
- * Everything here is static markup produced at build time by
- * scripts/fetch-github-stats.mjs. No network calls happen in the browser, so
- * the section cannot be taken down by a third-party service and needs no CSP
- * exemptions.
+ * scripts/fetch-github-stats.mjs writes src/content/github-stats.json before
+ * `next build`, so everything below is static markup. No browser fetch, no
+ * third-party image host, no CSP exemption, nothing that can be down.
  *
- * The generation date is printed because the data is a snapshot: a reader
- * should be able to see how fresh it is rather than assume it is live.
+ * Two exports, because the /github page frames the graph and the cards as
+ * separate sections:
+ *   GitHubStatPanels    — the three-card grid
+ *   ContributionHeatmap — the calendar on its own
+ *
+ * Neither renders its own heading or outer frame; the page's <Section>
+ * supplies those.
  */
+
+type Language = { name: string; color: string; percent: number };
+type Day = { date: string; count: number; level: number };
+type Streak = { days: number; start: string | null; end: string | null };
+
+type Snapshot = {
+  ok: boolean;
+  generatedAt: string | null;
+  login: string;
+  stats: {
+    followers: number;
+    publicRepos: number;
+    stars: number;
+    commits: number;
+    pullRequests: number;
+    issues: number;
+    reviews: number;
+  };
+  languages: Language[];
+  contributions: {
+    total: number;
+    currentStreak: Streak;
+    longestStreak: Streak;
+    calendar: Day[];
+  };
+};
+
+// Declared rather than inferred. Inferring from the JSON ties the types to
+// whatever that file happens to contain — an empty fallback snapshot gives
+// `never[]` for the arrays and the component stops compiling.
+const data = raw as unknown as Snapshot;
+
+/** The site's teal. Swap for a CSS variable if one is defined for it — this is
+ *  the only colour the component hardcodes. */
+const ACCENT = "#0F7A72";
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -31,111 +70,123 @@ function formatRange(start: string | null, end: string | null) {
   return from === to ? from : `${from} – ${to}`;
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <section className="grid content-start gap-6 border-t border-rule-strong pt-6">
-      <h3 className="label">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function Figure({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="grid gap-1">
-      <span className="text-2xl tabular-nums text-fg">{value}</span>
-      <span className="mono text-micro uppercase tracking-[0.11em] text-fg-faint">
-        {label}
-      </span>
+    <div className="flex items-baseline justify-between gap-4 border-b border-rule py-2 last:border-b-0">
+      <span className="text-fg-muted">{label}</span>
+      <span className="mono tabular-nums">{value}</span>
     </div>
   );
 }
 
-function Overview() {
+function Activity() {
   const s = data.stats;
   return (
-    <Panel title="Overview">
-      <div className="grid grid-cols-2 gap-6">
-        <Figure value={nf.format(s.commits)} label="Commits" />
-        <Figure value={nf.format(s.pullRequests)} label="Pull requests" />
-        <Figure value={nf.format(s.issues)} label="Issues" />
-        <Figure value={nf.format(s.reviews)} label="Reviews" />
-        <Figure value={nf.format(s.publicRepos)} label="Repositories" />
-        <Figure value={nf.format(s.stars)} label="Stars earned" />
+    <li className="surface p-6">
+      <p className="label mb-4">Activity</p>
+      <div className="text-sm">
+        <Row label="Commits" value={nf.format(s.commits)} />
+        <Row label="Pull requests" value={nf.format(s.pullRequests)} />
+        <Row label="Issues" value={nf.format(s.issues)} />
+        <Row label="Reviews" value={nf.format(s.reviews)} />
+        <Row label="Stars earned" value={nf.format(s.stars)} />
       </div>
-    </Panel>
+    </li>
   );
 }
 
 function Languages() {
-  if (data.languages.length === 0) return null;
-
   return (
-    <Panel title="Languages">
-      <div className="flex h-2 w-full overflow-hidden rounded-full">
-        {data.languages.map((lang) => (
-          <span
-            key={lang.name}
-            style={{ width: `${lang.percent}%`, backgroundColor: lang.color }}
-            title={`${lang.name} ${lang.percent}%`}
-          />
-        ))}
-      </div>
+    <li className="surface p-6">
+      <p className="label mb-4">Languages</p>
 
-      <ul className="grid gap-2">
-        {data.languages.map((lang) => (
-          <li key={lang.name} className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: lang.color }}
-            />
-            <span className="text-body text-fg">{lang.name}</span>
-            <span className="mono ml-auto text-micro tabular-nums text-fg-faint">
-              {lang.percent.toFixed(1)}%
-            </span>
-          </li>
-        ))}
-      </ul>
+      {data.languages.length === 0 ? (
+        <p className="text-sm text-fg-muted">No language data in this snapshot.</p>
+      ) : (
+        <>
+          <div className="mb-4 flex h-2 w-full overflow-hidden rounded-full">
+            {data.languages.map((lang) => (
+              <span
+                key={lang.name}
+                style={{ width: `${lang.percent}%`, backgroundColor: lang.color }}
+                title={`${lang.name} ${lang.percent}%`}
+              />
+            ))}
+          </div>
 
-      <p className="mono text-micro text-fg-faint">
-        By bytes of source across public repositories, forks excluded.
-      </p>
-    </Panel>
+          <div className="text-sm">
+            {data.languages.map((lang) => (
+              <div
+                key={lang.name}
+                className="flex items-baseline gap-3 border-b border-rule py-2 last:border-b-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: lang.color }}
+                />
+                <span className="text-fg-muted">{lang.name}</span>
+                <span className="mono ml-auto tabular-nums">
+                  {lang.percent.toFixed(1)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </li>
   );
 }
 
 function Streak() {
   const c = data.contributions;
   return (
-    <Panel title="Streak">
+    <li className="surface p-6">
+      <p className="label mb-4">Streak</p>
+
       <div className="grid gap-6">
-        <div className="grid gap-1">
-          <span className="text-2xl tabular-nums text-fg">{nf.format(c.total)}</span>
-          <span className="mono text-micro uppercase tracking-[0.11em] text-fg-faint">
-            Total contributions
-          </span>
+        <div>
+          <p className="mono text-3xl tabular-nums">{nf.format(c.total)}</p>
+          <p className="label mt-1">Total contributions</p>
         </div>
 
-        <div className="grid gap-1">
-          <span className="text-2xl tabular-nums text-[color:var(--signal)]">
+        <div>
+          <p className="mono text-3xl tabular-nums" style={{ color: ACCENT }}>
             {nf.format(c.currentStreak.days)}
-          </span>
-          <span className="mono text-micro uppercase tracking-[0.11em] text-fg-faint">
-            Current streak · {formatRange(c.currentStreak.start, c.currentStreak.end)}
-          </span>
+          </p>
+          <p className="label mt-1">
+            Current · {formatRange(c.currentStreak.start, c.currentStreak.end)}
+          </p>
         </div>
 
-        <div className="grid gap-1">
-          <span className="text-2xl tabular-nums text-fg">
+        <div>
+          <p className="mono text-3xl tabular-nums">
             {nf.format(c.longestStreak.days)}
-          </span>
-          <span className="mono text-micro uppercase tracking-[0.11em] text-fg-faint">
-            Longest streak · {formatRange(c.longestStreak.start, c.longestStreak.end)}
-          </span>
+          </p>
+          <p className="label mt-1">
+            Longest · {formatRange(c.longestStreak.start, c.longestStreak.end)}
+          </p>
         </div>
       </div>
-    </Panel>
+    </li>
+  );
+}
+
+export function GitHubStatPanels() {
+  if (!data.ok) return null;
+
+  return (
+    <>
+      <ul className="grid gap-px bg-rule lg:grid-cols-3">
+        <Activity />
+        <Languages />
+        <Streak />
+      </ul>
+      <p className="label mt-6">
+        Queried from the GitHub GraphQL API at deploy time and rendered as static
+        markup. Snapshot taken {formatDate(data.generatedAt)}.
+      </p>
+    </>
   );
 }
 
@@ -157,8 +208,8 @@ export function ContributionHeatmap() {
   const width = columns * STEP - GAP;
   const height = 7 * STEP - GAP + 16;
 
-  // Labels are placed by column rather than by month boundary, so a short
-  // month never collides with its neighbour.
+  // Labels are spaced by column rather than placed at every month boundary, so
+  // a short month never collides with its neighbour.
   const months: { label: string; x: number }[] = [];
   let lastMonth = "";
   let lastColumn = Number.NEGATIVE_INFINITY;
@@ -182,49 +233,50 @@ export function ContributionHeatmap() {
   });
 
   return (
-    <section className="grid gap-4 border-t border-rule-strong pt-6 text-fg">
-      <h3 className="label">Contributions, last 53 weeks</h3>
-
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label={`${nf.format(data.contributions.total)} contributions in total; the last 53 weeks are shown as a daily grid.`}
-      >
-        {months.map((month) => (
-          <text
-            key={`${month.label}-${month.x}`}
-            x={month.x}
-            y={9}
-            className="mono"
-            fontSize="9"
-            fill="currentColor"
-            fillOpacity={0.5}
-          >
-            {month.label}
-          </text>
-        ))}
-
-        {days.map((day, i) => {
-          const index = i + offset;
-          return (
-            <rect
-              key={day.date}
-              x={Math.floor(index / 7) * STEP}
-              y={(index % 7) * STEP + 16}
-              width={CELL}
-              height={CELL}
-              rx={2}
-              fill={day.level === 0 ? "currentColor" : "var(--signal)"}
-              fillOpacity={day.level === 0 ? 0.08 : (LEVEL_OPACITY[day.level] ?? 1)}
+    <>
+      <div className="overflow-x-auto rounded-sm border border-rule p-4">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          width={width}
+          height={height}
+          className="h-auto w-full min-w-[640px]"
+          role="img"
+          aria-label={`${nf.format(data.contributions.total)} contributions in total. The last 53 weeks are shown as a grid of days.`}
+        >
+          {months.map((month) => (
+            <text
+              key={`${month.label}-${month.x}`}
+              x={month.x}
+              y={9}
+              fontSize="9"
+              fill="currentColor"
+              fillOpacity={0.5}
             >
-              <title>{`${day.count} on ${day.date}`}</title>
-            </rect>
-          );
-        })}
-      </svg>
+              {month.label}
+            </text>
+          ))}
 
-      <div className="mono flex items-center gap-2 text-micro text-fg-faint">
+          {days.map((day, i) => {
+            const index = i + offset;
+            return (
+              <rect
+                key={day.date}
+                x={Math.floor(index / 7) * STEP}
+                y={(index % 7) * STEP + 16}
+                width={CELL}
+                height={CELL}
+                rx={2}
+                fill={day.level === 0 ? "currentColor" : ACCENT}
+                fillOpacity={day.level === 0 ? 0.08 : (LEVEL_OPACITY[day.level] ?? 1)}
+              >
+                <title>{`${day.count} on ${day.date}`}</title>
+              </rect>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="label mt-4 flex items-center gap-2">
         <span>Less</span>
         {LEVEL_OPACITY.map((opacity, level) => (
           <svg key={level} width={CELL} height={CELL} aria-hidden="true">
@@ -232,34 +284,13 @@ export function ContributionHeatmap() {
               width={CELL}
               height={CELL}
               rx={2}
-              fill={level === 0 ? "currentColor" : "var(--signal)"}
+              fill={level === 0 ? "currentColor" : ACCENT}
               fillOpacity={level === 0 ? 0.08 : opacity}
             />
           </svg>
         ))}
         <span>More</span>
       </div>
-    </section>
-  );
-}
-
-export function GitHubStats() {
-  if (!data.ok) return null;
-
-  return (
-    <div className="grid gap-12">
-      <div className="grid gap-12 md:grid-cols-3 md:gap-8">
-        <Overview />
-        <Languages />
-        <Streak />
-      </div>
-
-      <ContributionHeatmap />
-
-      <p className="mono text-micro text-fg-faint">
-        Built from the GitHub GraphQL API at deploy time and rendered as static
-        markup. Snapshot taken {formatDate(data.generatedAt)}.
-      </p>
-    </div>
+    </>
   );
 }
