@@ -12,7 +12,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
     "check": "npm run typecheck && npm run lint",
     "prepare": "husky || true",
-    "preview": "npx serve out"
+    "preview": "npx serve out",
+    "prebuild": "node scripts/fetch-github-stats.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
