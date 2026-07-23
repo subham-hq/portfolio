@@ -1,0 +1,55 @@
+{
+  "name": "subhambhattacharya-com",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal site of Subham Bhattacharya \u2014 backend engineer.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
+    "check": "npm run typecheck && npm run lint",
+    "prepare": "husky || true",
+    "preview": "npx serve out"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.6.1",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
+    "motion": "^11.15.0",
+    "next": "^15.5.21",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.171.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@types/three": "^0.171.0",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.5.21",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "packageManager": "npm@10.9.7",
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "src/**/*.{css,md}": [
+      "prettier --write"
+    ]
+  }
+}

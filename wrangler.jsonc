@@ -1,0 +1,15 @@
+{
+  // Cloudflare Pages reads this file at build time and uses it to locate the
+  // built site. It pins the output directory so a mis-set dashboard field
+  // cannot break the deploy.
+  //
+  // It CANNOT set the build command — that lives only in the Pages project
+  // settings. If a build fails with `npx @cloudflare/next-on-pages`, the
+  // command is still configured in the dashboard and must be changed there.
+  // That package is deprecated and its peer range no longer resolves.
+  //
+  // This project is a static export, so no adapter is needed at all.
+  "name": "subhambhattacharya-com",
+  "compatibility_date": "2026-07-01",
+  "pages_build_output_dir": "out"
+}

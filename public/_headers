@@ -1,0 +1,22 @@
+# Cloudflare Pages reads this file directly.
+# Mirrors the security headers that next.config.ts can no longer set in
+# export mode. Keep the two in sync if the config ever regains them.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ghchart.rshah.org https://github-readme-stats.vercel.app https://streak-stats.demolab.com; font-src 'self' data:; connect-src 'self' https://api.github.com https://api.web3forms.com https://va.vercel-scripts.com https://vitals.vercel-insights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://api.web3forms.com; object-src 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()
+
+# Fingerprinted build assets are immutable — cache them for a year.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.png
+  Cache-Control: public, max-age=604800
+/*.jpg
+  Cache-Control: public, max-age=604800
+/*.pdf
+  Cache-Control: public, max-age=86400

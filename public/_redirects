@@ -1,0 +1,9 @@
+# Routes renamed during development. Kept so any link already shared still
+# resolves. Cloudflare Pages reads this file directly.
+
+/work            /projects        301
+/work/*          /projects/:splat 301
+/credentials     /certifications  301
+/stack           /tech-stack      301
+/skills          /tech-stack      301
+/cv              /resume          301
