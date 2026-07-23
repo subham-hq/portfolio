@@ -180,6 +180,7 @@ export function ContactForm() {
         "The message did not send. Email me directly — the address is below and the button copies it.",
       );
     }
+    };
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-8">
