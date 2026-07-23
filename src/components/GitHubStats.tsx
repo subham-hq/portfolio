@@ -144,33 +144,41 @@ const GAP = 3;
 const STEP = CELL + GAP;
 const LEVEL_OPACITY = [0, 0.25, 0.45, 0.7, 1];
 
-function Heatmap() {
+export function ContributionHeatmap() {
   const days = data.contributions.calendar;
-  if (days.length === 0) return null;
+  const first = days[0];
+  if (!first) return null;
 
   // Pad the front so the first column starts on a Sunday and the grid reads as
   // real weeks rather than an arbitrary 7-row wrap.
-  const offset = new Date(`${days[0].date}T00:00:00Z`).getUTCDay();
+  const offset = new Date(`${first.date}T00:00:00Z`).getUTCDay();
   const columns = Math.ceil((offset + days.length) / 7);
 
   const width = columns * STEP - GAP;
   const height = 7 * STEP - GAP + 16;
 
+  // Labels are placed by column rather than by month boundary, so a short
+  // month never collides with its neighbour.
   const months: { label: string; x: number }[] = [];
   let lastMonth = "";
+  let lastColumn = Number.NEGATIVE_INFINITY;
 
   days.forEach((day, i) => {
     const month = day.date.slice(0, 7);
     if (month === lastMonth) return;
     lastMonth = month;
+
     const column = Math.floor((i + offset) / 7);
-    const label = new Date(`${day.date}T00:00:00Z`).toLocaleDateString("en-GB", {
-      month: "short",
-      timeZone: "UTC",
+    if (column - lastColumn < 3) return;
+    lastColumn = column;
+
+    months.push({
+      label: new Date(`${day.date}T00:00:00Z`).toLocaleDateString("en-GB", {
+        month: "short",
+        timeZone: "UTC",
+      }),
+      x: column * STEP,
     });
-    if (months.length === 0 || column - months[months.length - 1].x / STEP >= 3) {
-      months.push({ label, x: column * STEP });
-    }
   });
 
   return (
@@ -208,7 +216,7 @@ function Heatmap() {
               height={CELL}
               rx={2}
               fill={day.level === 0 ? "currentColor" : "var(--signal)"}
-              fillOpacity={day.level === 0 ? 0.08 : LEVEL_OPACITY[day.level]}
+              fillOpacity={day.level === 0 ? 0.08 : (LEVEL_OPACITY[day.level] ?? 1)}
             >
               <title>{`${day.count} on ${day.date}`}</title>
             </rect>
@@ -246,7 +254,7 @@ export function GitHubStats() {
         <Streak />
       </div>
 
-      <Heatmap />
+      <ContributionHeatmap />
 
       <p className="mono text-micro text-fg-faint">
         Built from the GitHub GraphQL API at deploy time and rendered as static
