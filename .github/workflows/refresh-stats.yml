@@ -1,0 +1,11 @@
+name: Refresh GitHub stats
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "${{ secrets.CF_PAGES_DEPLOY_HOOK }}"
