@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BookCall } from "@/components/BookCall";
 import { ContactForm } from "@/components/ContactForm";
 import { Faq } from "@/components/Faq";
 import { LocalClock } from "@/components/LocalClock";
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
 };
 
 const channels = [
+  {
+    label: "Book a call",
+    value: "cal.com/subhambhattacharya",
+    href: links.cal,
+    note: "15 minutes, pick any slot. Fastest route to a conversation.",
+  },
   {
     label: "Email",
     value: person.email,
@@ -63,6 +70,22 @@ export default function ContactPage() {
         }
       />
 
+      {/* Placed above the form deliberately. Someone who navigates to /contact
+          has already decided to make contact; a calendar closes that in one
+          click, where a form is three fields and a wait. */}
+      <Section title="Fastest route">
+        <div className="surface flex flex-wrap items-center justify-between gap-6 rounded-md border border-signal/30 p-7">
+          <div>
+            <p className="font-display text-h3">Pick a time that works.</p>
+            <p className="prose-measure mt-2 text-fg-muted">
+              A 15-minute intro call, on your calendar, no back-and-forth. If you would
+              rather write first, the form is below.
+            </p>
+          </div>
+          <BookCall variant="solid" />
+        </div>
+      </Section>
+
       <Section title="Message">
         <ContactForm />
       </Section>
@@ -110,6 +133,16 @@ export default function ContactPage() {
           </SpecRow>
           <SpecRow label="Working hours">
             09:00–19:00 IST. I overlap comfortably with EMEA, partially with US Eastern.
+          </SpecRow>
+          <SpecRow label="Book directly">
+            <a
+              href={links.cal}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="link-underline text-signal"
+            >
+              cal.com/subhambhattacharya/intro ↗
+            </a>
           </SpecRow>
           <SpecRow label="Résumé">
             <a href={links.resume} className="link-underline" download>

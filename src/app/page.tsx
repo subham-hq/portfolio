@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookCall } from "@/components/BookCall";
 import { Faq } from "@/components/Faq";
 import { Figures } from "@/components/Figures";
 import { ScrambleText } from "@/components/ScrambleText";
@@ -109,10 +110,13 @@ export default async function HomePage() {
                       See the work
                     </Button>
                   </Magnetic>
+                  {/* Replaces the generic "Get in touch". Same intent, but it
+                      lands on a calendar instead of a form — and /contact is
+                      still one click away in the nav and at section 10. Three
+                      buttons, not four: a fourth stacks full-width on a phone
+                      and pushes the fold down. */}
                   <Magnetic>
-                    <Button href="/contact" variant="outline" fullWidth>
-                      Get in touch
-                    </Button>
+                    <BookCall fullWidth />
                   </Magnetic>
                   <Magnetic>
                     <Button href={links.resume} variant="outline" external fullWidth>
@@ -355,7 +359,12 @@ export default async function HomePage() {
             />
             <div className="flex flex-wrap gap-3">
               <Magnetic>
-                <Button href="/contact">Send a message</Button>
+                <BookCall variant="solid" />
+              </Magnetic>
+              <Magnetic>
+                <Button href="/contact" variant="outline">
+                  Send a message
+                </Button>
               </Magnetic>
               <Magnetic>
                 <Button href={links.github} variant="outline" external>

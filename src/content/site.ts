@@ -30,6 +30,7 @@ export const links = {
   discord: "https://discord.com/users/1457056899773235200",
   email: `mailto:${person.email}`,
   resume: "/subham-bhattacharya-resume.pdf",
+  cal: "https://cal.com/subhambhattacharya/intro",
 } as const;
 
 export const githubUser = "subham-hq";

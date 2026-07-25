@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { footerNav, links, nav } from "@/content/site";
 import { cx } from "@/lib/utils";
 import { AmbientAudio } from "./AmbientAudio";
+import { BookCall } from "./BookCall";
 import { CommandHint } from "./CommandPalette";
 import { LocalClock } from "./LocalClock";
 import { Wordmark } from "./Monogram";
@@ -126,6 +127,11 @@ export function Header() {
             <CommandHint />
             <AmbientAudio />
             <ThemeToggle />
+            {/* lg and up only. At md the seven-item primary nav, the wordmark
+                and four controls already fill the row — an eighth element
+                overflows before the nav collapses. Below lg the menu sheet
+                carries it, pinned to the bottom. */}
+            <BookCall size="compact" className="ml-1 hidden lg:inline-flex" />
             <button
               ref={toggleRef}
               type="button"
@@ -227,12 +233,17 @@ export function Header() {
               transition={{ duration: 0.5, delay: reduced ? 0 : 0.3, ease: EASE }}
             >
               <p className="label mb-4">Backend engineer · West Bengal</p>
-              <Link
-                href="/contact"
-                className="mono flex min-h-12 items-center justify-center gap-2 rounded-sm bg-fg px-4 text-label uppercase tracking-[0.11em] text-bg transition-opacity hover:opacity-85"
-              >
-                Get in touch <span aria-hidden="true">→</span>
-              </Link>
+              {/* Booking takes the primary slot in the thumb zone; the message
+                  form sits beside it rather than being replaced. */}
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                <BookCall variant="solid" className="min-h-12 w-full justify-center" />
+                <Link
+                  href="/contact"
+                  className="mono flex min-h-12 items-center justify-center gap-2 rounded-sm border border-rule-strong px-4 text-label uppercase tracking-[0.11em] text-fg-muted transition-colors hover:border-signal hover:text-signal"
+                >
+                  Send a message <span aria-hidden="true">→</span>
+                </Link>
+              </div>
               <p className="label mt-3 flex items-center justify-center gap-2">
                 <LocalClock />
                 <span aria-hidden="true">·</span>

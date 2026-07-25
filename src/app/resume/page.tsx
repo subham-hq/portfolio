@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BookCall } from "@/components/BookCall";
 import { Button, PageHeader, Section, SpecRow, Tag } from "@/components/primitives";
 import { credentials, languages, skills, timeline } from "@/content/records";
 import { bio, links, person } from "@/content/site";
@@ -28,6 +29,9 @@ export default function ResumePage() {
         <Button href={links.resume} external>
           Download PDF
         </Button>
+        {/* Anyone reading a résumé is evaluating. Give them the next step here
+            rather than making them find the contact page. */}
+        <BookCall />
         <Button href={links.linkedin} variant="outline" external>
           LinkedIn
         </Button>
@@ -47,6 +51,16 @@ export default function ResumePage() {
           <SpecRow label="Email">
             <a href={links.email} className="link-underline">
               {person.email}
+            </a>
+          </SpecRow>
+          <SpecRow label="Book a call">
+            <a
+              href={links.cal}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="link-underline text-signal"
+            >
+              cal.com/subhambhattacharya/intro ↗
             </a>
           </SpecRow>
           <SpecRow label="Core skills">{core.join(" · ")}</SpecRow>
