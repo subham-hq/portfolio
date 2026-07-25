@@ -6,11 +6,7 @@ import { cx } from "@/lib/utils";
 /**
  * AMBIENT AUDIO
  *
- * A low, slowly-moving drone, synthesised in the browser with the Web Audio
- * API. There is no mp3: the whole thing is four oscillators and a filter, so
- * it costs zero bytes of transfer and cannot be a loading cost on a page that
- * is otherwise carefully budgeted. Writing the sound rather than shipping one
- * also happens to be the more interesting answer on an engineer's site.
+ * Plays a single looping track behind the site, behind a header toggle.
  *
  * ── On autoplay ────────────────────────────────────────────────────────────
  * It starts OFF, and that is not a compromise — every current browser blocks
@@ -19,207 +15,115 @@ import { cx } from "@/lib/utils";
  * toggle for exactly this reason.
  *
  * It is also the right call independently. The people this site is built for
- * will open it at a desk, possibly in an open-plan office, often with several
- * tabs already going. Audio they did not ask for is the fastest way to make
- * someone close a tab. An obvious control they can choose to use is not.
+ * will open it at a desk, often in an open-plan office, usually with several
+ * tabs already going. Audio nobody asked for is the fastest way to lose them.
  *
- * The preference persists, so a returning visitor who turned it on gets it
- * back on their next visit — that first gesture is enough for the browser.
+ * ── Nothing downloads until it is wanted ───────────────────────────────────
+ * The file is 3.4 MB. That would be, by a wide margin, the heaviest thing on
+ * a site whose entire JavaScript budget is around 110 kB — so the <audio>
+ * element is created in JavaScript and its `src` is not set until the moment
+ * the toggle is first switched on. A visitor who never turns sound on never
+ * requests a byte of it. That single decision is why shipping a real track
+ * here costs nothing.
  *
- * ── The sound ──────────────────────────────────────────────────────────────
- * Five layers, tuned for a ship's-hold register rather than a warm pad:
- *
- *   SUB      E1 sine at 41.2Hz — felt more than heard, gives the bed weight.
- *   ENGINE   Two sawtooths a fifth apart through a resonant lowpass. The
- *            resonance is what makes it metallic instead of soft, and the
- *            filter is swept by a 55-second LFO so the timbre opens and
- *            closes rather than sitting still.
- *   AIR      Bandpassed white noise at very low gain — hull static. This is
- *            the layer that makes it read as a place rather than a chord.
- *   DRIFT    A detuned octave that beats slowly against the engine, so the
- *            tuning is never quite settled.
- *   PING     A sine with a fast exponential decay, fired at random intervals
- *            between 11 and 23 seconds. Sparse and quiet: the ear catches it
- *            once, then stops expecting it, which is what stops the loop from
- *            becoming a loop.
- *
- * Master gain 0.04. Everything is scheduled on the AudioContext clock rather
- * than setInterval, so the pings do not drift when the main thread is busy.
+ * ── The loop seam ──────────────────────────────────────────────────────────
+ * `loop` on an <audio> element restarts an MP3 with a short gap, because the
+ * encoder pads the start and end of the stream. On a five-minute ambient bed
+ * that gap lands as an audible click, and the track's own ending is abrupt
+ * against its beginning anyway. So the loop is handled manually: the volume
+ * fades down over the last few seconds, the element seeks back to zero, and
+ * it fades up again. The seam becomes a slow breath instead of a jump.
  */
 
+const SRC = "/ambient.mp3";
 const STORAGE_KEY = "ambient-audio";
 
-const MASTER_GAIN = 0.04;
-const FADE_IN = 2.6;
-const FADE_OUT = 1.0;
+/** Background level. High enough to hear over a quiet room, low enough that
+ *  it never competes with anything the visitor is actually doing. */
+const VOLUME = 0.3;
 
-/** Sparse sonar ping. Random interval, in seconds. */
-const PING_MIN = 11;
-const PING_MAX = 23;
+const FADE_IN = 2600;
+const FADE_OUT = 900;
 
-interface Graph {
-  context: AudioContext;
-  master: GainNode;
-  stop: () => void;
-}
-
-/** Short burst of noise, used as the source for the hull-static layer. */
-function noiseBuffer(context: AudioContext): AudioBuffer {
-  const length = context.sampleRate * 3;
-  const buffer = context.createBuffer(1, length, context.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
-  return buffer;
-}
-
-function buildGraph(): Graph | null {
-  const Ctor =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
-  if (!Ctor) return null;
-
-  const context = new Ctor();
-  const stoppable: { stop: (when?: number) => void }[] = [];
-
-  const master = context.createGain();
-  master.gain.value = 0;
-  master.connect(context.destination);
-
-  // ── ENGINE ───────────────────────────────────────────────────────────────
-  // Resonant lowpass. Q of 6 is the whole character: at 1 this is a warm pad,
-  // at 6 it rings, which is what reads as machinery.
-  const engineFilter = context.createBiquadFilter();
-  engineFilter.type = "lowpass";
-  engineFilter.frequency.value = 260;
-  engineFilter.Q.value = 6;
-  engineFilter.connect(master);
-
-  const sweep = context.createOscillator();
-  sweep.type = "sine";
-  sweep.frequency.value = 0.018;
-  const sweepDepth = context.createGain();
-  sweepDepth.gain.value = 210;
-  sweep.connect(sweepDepth);
-  sweepDepth.connect(engineFilter.frequency);
-  sweep.start();
-  stoppable.push(sweep);
-
-  for (const voice of [
-    { frequency: 82.41, detune: 0, gain: 0.5 },
-    { frequency: 123.47, detune: -6, gain: 0.28 },
-    { frequency: 164.81, detune: 9, gain: 0.14 },
-  ]) {
-    const osc = context.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.value = voice.frequency;
-    osc.detune.value = voice.detune;
-
-    const gain = context.createGain();
-    gain.gain.value = voice.gain;
-
-    osc.connect(gain);
-    gain.connect(engineFilter);
-    osc.start();
-    stoppable.push(osc);
-  }
-
-  // ── SUB ──────────────────────────────────────────────────────────────────
-  const sub = context.createOscillator();
-  sub.type = "sine";
-  sub.frequency.value = 41.2;
-  const subGain = context.createGain();
-  subGain.gain.value = 0.85;
-  sub.connect(subGain);
-  subGain.connect(master);
-  sub.start();
-  stoppable.push(sub);
-
-  // ── AIR ──────────────────────────────────────────────────────────────────
-  const noise = context.createBufferSource();
-  noise.buffer = noiseBuffer(context);
-  noise.loop = true;
-
-  const airFilter = context.createBiquadFilter();
-  airFilter.type = "bandpass";
-  airFilter.frequency.value = 900;
-  airFilter.Q.value = 0.9;
-
-  const airGain = context.createGain();
-  airGain.gain.value = 0.05;
-
-  // Slow amplitude breathing on the static, so it is not a flat hiss.
-  const breath = context.createOscillator();
-  breath.type = "sine";
-  breath.frequency.value = 0.06;
-  const breathDepth = context.createGain();
-  breathDepth.gain.value = 0.025;
-  breath.connect(breathDepth);
-  breathDepth.connect(airGain.gain);
-  breath.start();
-  stoppable.push(breath);
-
-  noise.connect(airFilter);
-  airFilter.connect(airGain);
-  airGain.connect(master);
-  noise.start();
-  stoppable.push(noise);
-
-  // ── PING ─────────────────────────────────────────────────────────────────
-  // Scheduled recursively on the audio clock. Each ping creates and disposes
-  // its own nodes, which is the correct pattern for one-shots — a permanent
-  // oscillator gated by a gain node leaks CPU for a sound heard twice a minute.
-  let pingTimer: number | undefined;
-
-  const ping = () => {
-    const now = context.currentTime;
-    const osc = context.createOscillator();
-    const gain = context.createGain();
-
-    osc.type = "sine";
-    // Alternates between two pitches a fourth apart so consecutive pings are
-    // not identical.
-    osc.frequency.setValueAtTime(Math.random() > 0.5 ? 1174.66 : 880, now);
-
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.16, now + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
-
-    osc.connect(gain);
-    gain.connect(master);
-    osc.start(now);
-    osc.stop(now + 2.8);
-
-    const wait = PING_MIN + Math.random() * (PING_MAX - PING_MIN);
-    pingTimer = window.setTimeout(ping, wait * 1000);
-  };
-
-  pingTimer = window.setTimeout(
-    ping,
-    (PING_MIN + Math.random() * (PING_MAX - PING_MIN)) * 1000,
-  );
-
-  return {
-    context,
-    master,
-    stop: () => {
-      if (pingTimer !== undefined) clearTimeout(pingTimer);
-      for (const node of stoppable) {
-        try {
-          node.stop();
-        } catch {
-          // Already stopped — nothing to do.
-        }
-      }
-      void context.close();
-    },
-  };
-}
+/** Seconds before the end at which the loop fade begins. */
+const LOOP_FADE = 4;
 
 export function AmbientAudio() {
   const [enabled, setEnabled] = useState(false);
   const [ready, setReady] = useState(false);
-  const graph = useRef<Graph | null>(null);
+
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const fadeRaf = useRef(0);
+  const looping = useRef(false);
+
+  /** Tween the element volume. Cancels any tween already running, so rapid
+   *  toggling cannot stack two fades fighting over the same value. */
+  const fadeTo = useCallback((target: number, duration: number, onDone?: () => void) => {
+    const element = audio.current;
+    if (!element) return;
+
+    cancelAnimationFrame(fadeRaf.current);
+
+    const from = element.volume;
+    const delta = target - from;
+    if (Math.abs(delta) < 0.001 || duration <= 0) {
+      element.volume = target;
+      onDone?.();
+      return;
+    }
+
+    const start = performance.now();
+
+    const step = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      // easeInOutSine — a linear volume ramp is audible as a ramp; this is not.
+      const eased = 0.5 - Math.cos(t * Math.PI) / 2;
+      element.volume = Math.max(0, Math.min(1, from + delta * eased));
+
+      if (t < 1) {
+        fadeRaf.current = requestAnimationFrame(step);
+      } else {
+        onDone?.();
+      }
+    };
+
+    fadeRaf.current = requestAnimationFrame(step);
+  }, []);
+
+  /** Create the element and attach the source. Called on first enable only. */
+  const ensureAudio = useCallback((): HTMLAudioElement => {
+    if (audio.current) return audio.current;
+
+    const element = new Audio();
+    element.src = SRC;
+    element.preload = "auto";
+    // Manual looping — see the note on the seam above.
+    element.loop = false;
+    element.volume = 0;
+
+    // Handle the loop seam. `timeupdate` fires a few times a second, which is
+    // ample resolution for a four-second fade.
+    element.addEventListener("timeupdate", () => {
+      if (!element.duration || looping.current) return;
+      if (element.currentTime < element.duration - LOOP_FADE) return;
+
+      looping.current = true;
+      fadeTo(0, LOOP_FADE * 1000, () => {
+        element.currentTime = 0;
+        void element.play().catch(() => {});
+        fadeTo(VOLUME, FADE_IN, () => {
+          looping.current = false;
+        });
+      });
+    });
+
+    // If the file fails to load, fail quietly and reset the control rather
+    // than leaving a toggle that claims to be playing silence.
+    element.addEventListener("error", () => setEnabled(false));
+
+    audio.current = element;
+    return element;
+  }, [fadeTo]);
 
   useEffect(() => {
     setReady(true);
@@ -230,69 +134,76 @@ export function AmbientAudio() {
     }
   }, []);
 
-  // Build, fade, and tear down in response to `enabled`.
   useEffect(() => {
     if (!ready) return;
 
     if (enabled) {
-      if (!graph.current) graph.current = buildGraph();
-      const g = graph.current;
-      if (!g) return;
+      const element = ensureAudio();
+      element.volume = 0;
 
-      // Safari suspends new contexts until a gesture resolves.
-      void g.context.resume();
+      void element
+        .play()
+        .then(() => fadeTo(VOLUME, FADE_IN))
+        .catch(() => {
+          // A returning visitor arrives with the preference already on, but
+          // the browser will not start audio before they have interacted.
+          // Rather than flipping the toggle off and contradicting their saved
+          // choice, arm the next real gesture to start it.
+          const start = () => {
+            void element
+              .play()
+              .then(() => fadeTo(VOLUME, FADE_IN))
+              .catch(() => {});
+            window.removeEventListener("pointerdown", start);
+            window.removeEventListener("keydown", start);
+          };
+          window.addEventListener("pointerdown", start, { once: true });
+          window.addEventListener("keydown", start, { once: true });
+        });
 
-      const now = g.context.currentTime;
-      g.master.gain.cancelScheduledValues(now);
-      g.master.gain.setValueAtTime(g.master.gain.value, now);
-      g.master.gain.linearRampToValueAtTime(MASTER_GAIN, now + FADE_IN);
       return;
     }
 
-    const g = graph.current;
-    if (!g) return;
+    const element = audio.current;
+    if (!element) return;
 
-    const now = g.context.currentTime;
-    g.master.gain.cancelScheduledValues(now);
-    g.master.gain.setValueAtTime(g.master.gain.value, now);
-    g.master.gain.linearRampToValueAtTime(0, now + FADE_OUT);
-
-    // Tear the graph down once silent, rather than leaving oscillators running
-    // at zero gain for the rest of the session.
-    const timer = setTimeout(
-      () => {
-        g.stop();
-        graph.current = null;
-      },
-      FADE_OUT * 1000 + 120,
-    );
-
-    return () => clearTimeout(timer);
-  }, [enabled, ready]);
+    fadeTo(0, FADE_OUT, () => {
+      element.pause();
+      looping.current = false;
+    });
+  }, [enabled, ready, ensureAudio, fadeTo]);
 
   // Duck to silence when the tab is hidden. Audio from a tab nobody is looking
   // at is the single most irritating thing a site can do.
   useEffect(() => {
     const onVisibility = () => {
-      const g = graph.current;
-      if (!g) return;
-      const now = g.context.currentTime;
-      g.master.gain.cancelScheduledValues(now);
-      g.master.gain.linearRampToValueAtTime(
-        document.hidden ? 0 : enabled ? MASTER_GAIN : 0,
-        now + 0.4,
-      );
+      const element = audio.current;
+      if (!element || !enabled || looping.current) return;
+
+      if (document.hidden) {
+        fadeTo(0, 400, () => element.pause());
+      } else {
+        void element
+          .play()
+          .then(() => fadeTo(VOLUME, 900))
+          .catch(() => {});
+      }
     };
 
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [enabled]);
+  }, [enabled, fadeTo]);
 
-  // Stop the audio if the component ever unmounts.
+  // Stop and release on unmount.
   useEffect(() => {
     return () => {
-      graph.current?.stop();
-      graph.current = null;
+      cancelAnimationFrame(fadeRaf.current);
+      const element = audio.current;
+      if (element) {
+        element.pause();
+        element.src = "";
+      }
+      audio.current = null;
     };
   }, []);
 

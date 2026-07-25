@@ -1,9 +1,20 @@
 # Cloudflare Pages reads this file directly.
-# Mirrors the security headers that next.config.ts can no longer set in
-# export mode. Keep the two in sync if the config ever regains them.
+# Mirrors the security headers that next.config.ts cannot set in export mode.
+#
+# Adding a third-party host to the site means adding it to the matching
+# directive below, or the browser blocks the request silently — there is no
+# build error, only a console warning most people never see.
+#
+#   script-src   <script> and inline scripts
+#   style-src    stylesheets and inline styles
+#   img-src      <img>, and CSS background-image / border-image
+#   media-src    <audio> and <video>
+#   font-src     @font-face sources
+#   connect-src  fetch, XHR, WebSocket, sendBeacon
+#   form-action  where a native <form> may POST (not fetch — that is connect-src)
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.github.com https://contact-form.subham-bh.workers.dev https://va.vercel-scripts.com https://vitals.vercel-insights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://api.web3forms.com; object-src 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self' data:; connect-src 'self' https://api.github.com https://contact-form.subham-bh.workers.dev https://va.vercel-scripts.com https://vitals.vercel-insights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
@@ -20,3 +31,10 @@
   Cache-Control: public, max-age=604800
 /*.pdf
   Cache-Control: public, max-age=86400
+
+# The ambient track is 3.4 MB and only downloads for visitors who turn sound
+# on. Cached for 30 days rather than a year, and deliberately NOT `immutable`:
+# the filename never changes, so an immutable year would strand anyone who has
+# already heard it on the old track if you ever swap the file.
+/*.mp3
+  Cache-Control: public, max-age=2592000
