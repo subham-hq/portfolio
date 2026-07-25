@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { AmbientField } from "@/components/AmbientField";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Preloader } from "@/components/Preloader";
+import { SmoothScroll } from "@/components/SmoothScroll";
 import { BackToTop, ScrollProgress, ScrollVelocity } from "@/components/effects";
 import { Cursor, PageTransition } from "@/components/motion";
 import { bio, links, person, SITE_URL } from "@/content/site";
@@ -132,6 +133,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
+        <SmoothScroll />
         <AmbientField />
         <ScrollProgress />
         <ScrollVelocity />

@@ -1153,3 +1153,70 @@ body > header {
   border-right: 1px solid;
   border-bottom: 1px solid;
 }
+
+/* ═════════════════════════════════════════════════════ scramble + sound ═══ */
+
+/* The unresolved tail of a decrypting headline. Dimmed and tinted so the
+   resolve boundary is legible as it sweeps — without this the effect reads as
+   the text flickering rather than as characters settling. */
+.scramble-pending {
+  color: var(--signal);
+  opacity: 0.38;
+}
+
+/* Equaliser bars in the sound toggle. Animation only runs while audio is on,
+   so the control states its own condition without a second label. */
+.eq-bar {
+  animation: eq-pulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes eq-pulse {
+  from {
+    transform: scaleY(0.22);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar {
+    animation: none;
+    transform: scaleY(0.6);
+  }
+  .scramble-pending {
+    display: none;
+  }
+}
+
+/* ── Scramble text ───────────────────────────────────────────────────────
+   The unresolved tail sits in the signal hue at reduced opacity, so the
+   headline reads as a buffer filling from the left rather than as two
+   different pieces of text. */
+.scramble-pending {
+  color: var(--signal);
+  opacity: 0.55;
+}
+
+/* ── Sound toggle equaliser ──────────────────────────────────────────────
+   Four bars, offset by animation-delay, that run only while audio is on.
+   The control therefore shows its own state without a label change. */
+.eq-bar {
+  animation: eq-pulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes eq-pulse {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar {
+    animation: none;
+    transform: scaleY(0.6);
+  }
+}

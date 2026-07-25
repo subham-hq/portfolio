@@ -1,30 +1,36 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { footerNav, links, nav } from "@/content/site";
-import { CommandHint } from "./CommandPalette";
-import { Wordmark } from "./Monogram";
 import { cx } from "@/lib/utils";
+import { AmbientAudio } from "./AmbientAudio";
+import { CommandHint } from "./CommandPalette";
 import { LocalClock } from "./LocalClock";
+import { Wordmark } from "./Monogram";
 import { ThemeToggle } from "./ThemeToggle";
 
 /**
- * The mobile menu is a full-height sheet, not a dropdown.
+ * The menu is a full-height sheet, not a dropdown, on every breakpoint.
  *
- * The previous version rendered seven links directly under the header and
- * relied on the page not being taller than the viewport. Two problems: the
- * primary nav only reaches seven of nineteen routes, so twelve pages were
- * discoverable on mobile *only* by scrolling to the footer; and with body
- * scroll locked, anything past the fold was unreachable.
+ * The header nav carries seven routes; the site has nineteen. This sheet is
+ * the complete index, so nothing is reachable only by scrolling to the footer.
  *
- * This version exposes every route, scrolls internally, and pins the primary
- * action to the bottom — inside the thumb zone rather than at the top of a
- * 6-inch screen where nobody can reach it one-handed.
+ * It used to appear and disappear instantly — `{open ? <div/> : null}` with no
+ * transition, which is what made it feel sharp and cheap next to the rest of
+ * the page. It now wipes open from the top and staggers its rows in. The
+ * timings are deliberately slower than feels necessary on the first viewing:
+ * an interface that resolves rather than snaps is most of what separates an
+ * expensive-feeling site from a fast one.
  */
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
 export function Header() {
   const pathname = usePathname();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -46,7 +52,7 @@ export function Header() {
     };
 
     // Focus trap. Without it, tabbing from an open sheet walks into the page
-    // underneath, which a screen-reader or keyboard user cannot see is there.
+    // underneath, which a keyboard or screen-reader user cannot see is there.
     const onTab = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || !sheetRef.current) return;
       const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
@@ -78,6 +84,14 @@ export function Header() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  const primary = nav.filter((item) => item.href !== "/contact");
+
+  /** Rows lift out of a mask, staggered, once the sheet itself has opened. */
+  const row = {
+    hidden: { y: reduced ? 0 : "110%" },
+    shown: { y: 0 },
+  };
+
   return (
     <header className="no-print sticky top-0 z-50">
       <div className="border-b border-rule bg-bg/85 backdrop-blur-md">
@@ -91,13 +105,15 @@ export function Header() {
                 href={item.href}
                 aria-current={isActive(item.href) ? "page" : undefined}
                 className={cx(
-                  "mono nav-swap tap-area text-micro uppercase tracking-[0.11em] transition-colors",
+                  "mono tap-area flex items-center text-micro uppercase tracking-[0.11em] transition-colors",
                   isActive(item.href) ? "text-signal" : "text-fg-faint hover:text-fg",
                 )}
               >
-                <span className="nav-swap-inner">
-                  <span>{item.label}</span>
-                  <span aria-hidden="true">{item.label}</span>
+                <span className="nav-swap">
+                  <span className="nav-swap-inner">
+                    <span>{item.label}</span>
+                    <span aria-hidden="true">{item.label}</span>
+                  </span>
                 </span>
               </Link>
             ))}
@@ -108,13 +124,14 @@ export function Header() {
               <LocalClock />
             </span>
             <CommandHint />
+            <AmbientAudio />
             <ThemeToggle />
             <button
               ref={toggleRef}
               type="button"
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
-              aria-controls="mobile-nav"
+              aria-controls="site-menu"
               className="tap mono -mr-2 inline-flex items-center justify-center text-micro uppercase tracking-[0.11em] text-fg-faint transition-colors hover:text-fg"
             >
               {open ? "Close" : "Menu"}
@@ -123,88 +140,114 @@ export function Header() {
         </div>
       </div>
 
-      {open ? (
-        <div
-          ref={sheetRef}
-          id="mobile-nav"
-          className="fixed inset-x-0 top-14 bottom-0 z-50 flex flex-col border-t border-rule bg-bg"
-        >
-          <nav
-            aria-label="All pages"
-            className="shell flex-1 overflow-y-auto overscroll-contain py-6"
+      <AnimatePresence>
+        {open ? (
+          <motion.div
+            ref={sheetRef}
+            id="site-menu"
+            // clipPath wipes the panel open from the top edge rather than
+            // sliding a solid block over the page. It reads as the sheet being
+            // revealed, and it composites, so nothing reflows during the wipe.
+            initial={reduced ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)" }}
+            animate={reduced ? { opacity: 1 } : { clipPath: "inset(0 0 0% 0)" }}
+            exit={reduced ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)" }}
+            transition={{ duration: reduced ? 0.15 : 0.62, ease: EASE }}
+            className="fixed inset-x-0 top-14 bottom-0 z-50 flex flex-col border-t border-rule bg-bg"
           >
-            {/* The header nav carries seven routes; the site has nineteen. On
-                every breakpoint this sheet is the complete index, so nothing
-                is reachable only by scrolling to the footer. */}
-            <ul className="md:grid md:grid-cols-2 md:gap-x-12">
-              {nav
-                .filter((item) => item.href !== "/contact")
-                .map((item) => (
-                  <li key={item.href} className="border-b border-rule">
-                    <Link
-                      href={item.href}
-                      aria-current={isActive(item.href) ? "page" : undefined}
-                      className={cx(
-                        "font-display flex items-center justify-between py-3.5 text-h3",
-                        isActive(item.href) ? "text-signal" : "",
-                      )}
+            <motion.nav
+              aria-label="All pages"
+              className="shell flex-1 overflow-y-auto overscroll-contain py-6"
+              initial="hidden"
+              animate="shown"
+              transition={{ staggerChildren: 0.045, delayChildren: 0.16 }}
+            >
+              <ul className="md:grid md:grid-cols-2 md:gap-x-12">
+                {primary.map((item) => (
+                  <li key={item.href} className="overflow-hidden border-b border-rule">
+                    <motion.span
+                      variants={row}
+                      transition={{ duration: 0.6, ease: EASE }}
                     >
-                      {item.label}
-                      <span aria-hidden="true" className="mono text-label text-fg-faint">
-                        →
-                      </span>
-                    </Link>
+                      <Link
+                        href={item.href}
+                        aria-current={isActive(item.href) ? "page" : undefined}
+                        className={cx(
+                          "font-display group flex items-center justify-between py-3.5 text-h3 transition-colors",
+                          isActive(item.href) ? "text-signal" : "hover:text-signal",
+                        )}
+                      >
+                        {item.label}
+                        <span
+                          aria-hidden="true"
+                          className="mono text-label text-fg-faint transition-transform duration-500 group-hover:translate-x-1"
+                        >
+                          →
+                        </span>
+                      </Link>
+                    </motion.span>
                   </li>
                 ))}
-            </ul>
+              </ul>
 
-            {/* Every remaining route, so nothing is reachable only by scrolling
-                to the footer. Two columns keeps the sheet short enough to scan. */}
-            <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-4">
-              {Object.entries(footerNav).map(([group, items]) => (
-                <div key={group}>
-                  <p className="label mb-2">{group}</p>
-                  <ul>
-                    {items.map((item) => (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          className="tap-area block py-2 text-body text-fg-muted"
-                        >
-                          {item.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </nav>
+              <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-4">
+                {Object.entries(footerNav).map(([group, items]) => (
+                  <motion.div
+                    key={group}
+                    variants={{
+                      hidden: { opacity: 0, y: reduced ? 0 : 10 },
+                      shown: { opacity: 1, y: 0 },
+                    }}
+                    transition={{ duration: 0.55, ease: EASE }}
+                  >
+                    <p className="label mb-2">{group}</p>
+                    <ul>
+                      {items.map((item) => (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            className="tap-area block py-2 text-body text-fg-muted transition-colors hover:text-fg"
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.nav>
 
-          {/* Pinned to the bottom: the primary action sits in the thumb zone,
-              not at the top of the screen where it cannot be reached one-handed. */}
-          <div className="shell border-t border-rule py-4">
-            <p className="label mb-4">Backend engineer · West Bengal</p>
-            <Link
-              href="/contact"
-              className="mono flex min-h-12 items-center justify-center gap-2 rounded-sm bg-fg px-4 text-label uppercase tracking-[0.11em] text-bg"
+            {/* Pinned to the bottom: the primary action sits in the thumb zone,
+                not at the top of the screen where it cannot be reached
+                one-handed. */}
+            <motion.div
+              className="shell border-t border-rule py-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: reduced ? 0 : 0.3, ease: EASE }}
             >
-              Get in touch <span aria-hidden="true">→</span>
-            </Link>
-            <p className="label mt-3 flex items-center justify-center gap-2">
-              <LocalClock />
-              <span aria-hidden="true">·</span>
-              <a href={links.github} className="hover:text-fg">
-                GitHub
-              </a>
-              <span aria-hidden="true">·</span>
-              <a href={links.linkedin} className="hover:text-fg">
-                LinkedIn
-              </a>
-            </p>
-          </div>
-        </div>
-      ) : null}
+              <p className="label mb-4">Backend engineer · West Bengal</p>
+              <Link
+                href="/contact"
+                className="mono flex min-h-12 items-center justify-center gap-2 rounded-sm bg-fg px-4 text-label uppercase tracking-[0.11em] text-bg transition-opacity hover:opacity-85"
+              >
+                Get in touch <span aria-hidden="true">→</span>
+              </Link>
+              <p className="label mt-3 flex items-center justify-center gap-2">
+                <LocalClock />
+                <span aria-hidden="true">·</span>
+                <a href={links.github} className="hover:text-fg">
+                  GitHub
+                </a>
+                <span aria-hidden="true">·</span>
+                <a href={links.linkedin} className="hover:text-fg">
+                  LinkedIn
+                </a>
+              </p>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </header>
   );
 }

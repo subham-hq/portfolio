@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Faq } from "@/components/Faq";
 import { Figures } from "@/components/Figures";
+import { ScrambleText } from "@/components/ScrambleText";
 import { ProjectRow } from "@/components/ProjectRow";
 import { RepoGrid } from "@/components/RepoCard";
 import { Hero3D } from "@/components/Hero3D";
@@ -86,10 +87,12 @@ export default async function HomePage() {
                 </p>
               </FadeIn>
 
-              <TextReveal
+              {/* The index headline decrypts; page headers keep the word-mask
+                  reveal. One signature treatment, used once, in the place a
+                  returning visitor lands. */}
+              <ScrambleText
                 as="h1"
                 text={bio.headline}
-                delay={0.1}
                 className="font-display mt-6 text-h1"
               />
 
