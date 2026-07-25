@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { scroll } from "@/lib/scroll";
 
 /**
  * AMBIENT FIELD
@@ -22,6 +23,13 @@ import { useEffect, useRef } from "react";
  * Why one canvas rather than two components: the particle loop, the pointer
  * damping, the resize handling and the visibility gating are identical. Only
  * the seeding and the per-frame displacement differ.
+ *
+ * ── Receiving the hero ─────────────────────────────────────────────────────
+ * As the lattice above comes apart, this field brightens and its particles
+ * drift a little faster. The scattered nodes appear to arrive here. Nothing
+ * is literally handed between the two — one is WebGL, the other Canvas 2D —
+ * but they read the same scroll value, so the transition lands as a single
+ * continuous event rather than one thing ending and another beginning.
  *
  * Cost control:
  *   · particle count scales with viewport area and is hard-capped
@@ -152,6 +160,10 @@ export function AmbientField() {
       damped.x += (pointer.x - damped.x) * 0.09;
       damped.y += (pointer.y - damped.y) * 0.09;
 
+      // Rises from 0 to 1 across the first viewport, matching the lattice
+      // dissolve exactly. Both read the same store.
+      const arrival = scroll.heroExit;
+
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]!;
 
@@ -160,8 +172,9 @@ export function AmbientField() {
 
         if (mode === "dark" && !reduced) {
           // Parallax drift, scaled by depth. Wraps rather than resetting so
-          // there is no visible seam.
-          x = (p.x + t * (4 + p.z * 14)) % (width + 40);
+          // there is no visible seam. Drift accelerates slightly as the hero
+          // dissolves, so the field feels like it is absorbing something.
+          x = (p.x + t * (4 + p.z * 14) * (1 + arrival * 0.5)) % (width + 40);
           y = p.y + Math.sin(t * 0.18 + p.phase) * (1 + p.z * 3);
         }
 
@@ -192,7 +205,8 @@ export function AmbientField() {
 
         if (mode === "dark") {
           const twinkle = reduced ? 1 : 0.65 + Math.sin(t * 1.1 + p.phase) * 0.35;
-          ctx.globalAlpha = (0.16 + p.z * 0.52) * twinkle;
+          // Up to 45% brighter once the hero has fully dissolved.
+          ctx.globalAlpha = (0.16 + p.z * 0.52) * twinkle * (1 + arrival * 0.45);
           // A small share of stars take the accent hue, so the field belongs
           // to this palette rather than being generic white noise.
           ctx.fillStyle = seeded(i, 9) > 0.9 ? accent : "#dfe6ec";

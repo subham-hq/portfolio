@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════ scroll-linked motion ═══
+   Everything here reads a custom property published once per frame by
+   <ScrollDirector />:
+
+     --scroll-velocity   signed, -1..1   direction-aware effects
+     --scroll-speed      absolute, 0..1  magnitude effects
+     --scroll-progress   0..1            page position
+     --hero-exit         0..1            first viewport traversed
+
+   No component in this file attaches a scroll listener. One loop writes four
+   numbers; the compositor does the rest.
+   ========================================================================== */
+
+/* ── Hero stage ──────────────────────────────────────────────────────────
+   The WebGL lattice dissolves its own geometry as the reader scrolls. This
+   fades the container on top of that, which matters for two reasons: it
+   finishes the exit cleanly once the nodes have scattered, and it is the only
+   thing that fades the static SVG fallback served to phones and to anyone
+   without WebGL. Both paths therefore behave the same way. */
+.hero-stage {
+  opacity: calc(1 - var(--hero-exit, 0) * 1.15);
+  transform: scale(calc(1 - var(--hero-exit, 0) * 0.07));
+  will-change: opacity, transform;
+}
+
+/* ── Velocity tilt ───────────────────────────────────────────────────────
+   Sections lean into the direction of travel and settle when the reader
+   stops. Capped at 0.45deg — far below the point where text becomes hard to
+   read, and the reason it reads as weight rather than as an effect.
+
+   Applied to <section> rather than to a wrapper because the section carries
+   the hairline top rule, and tilting the rule with its content is what sells
+   it. Verified that no page has a sticky or fixed descendant inside a
+   section: a transform here would become their containing block and break
+   them. Re-check that before widening this selector. */
+@media (min-width: 48rem) {
+  main section {
+    transform: skewY(calc(var(--scroll-velocity, 0) * 0.45deg));
+    transform-origin: center left;
+  }
+}
+
+/* ── Marquee lean ────────────────────────────────────────────────────────
+   The discipline ticker already modulates its own duration from velocity.
+   This adds a matching tilt so it belongs to the same system. */
+.marquee {
+  transform: skewY(calc(var(--scroll-velocity, 0) * -0.5deg));
+}
+
+/* ── Section rule draw ───────────────────────────────────────────────────
+   The hairline above each section draws left to right as the section enters,
+   rather than simply being there. Scroll-driven, so it tracks the reader and
+   runs backwards when they scroll up.
+
+   `animation-timeline: view()` runs entirely off the main thread. Where it is
+   unsupported the rule is simply present from the start — the section is
+   fully readable either way, which is the correct shape for an enhancement. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    main section {
+      border-top-color: transparent;
+      position: relative;
+    }
+
+    main section::before {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      top: -1px;
+      height: 1px;
+      background: var(--rule-strong);
+      transform-origin: left;
+      animation: rule-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+
+    @keyframes rule-draw {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    /* Spec rows resolve as they cross into view rather than all at once on a
+       timer. On a long datasheet this is the difference between a page that
+       animates and a page that responds. */
+    .spec-row {
+      animation: row-settle linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 55%;
+    }
+
+    @keyframes row-settle {
+      from {
+        opacity: 0.25;
+        transform: translate3d(0, 8px, 0);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────
+   ScrollDirector never publishes velocity under this preference, so the tilt
+   rules above already resolve to 0deg. These are belt and braces: they hold
+   even if a stale custom property is left on the element. */
+@media (prefers-reduced-motion: reduce) {
+  main section,
+  .marquee {
+    transform: none;
+  }
+
+  .hero-stage {
+    opacity: 1;
+    transform: none;
+  }
+}

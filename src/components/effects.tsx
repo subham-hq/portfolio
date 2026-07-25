@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { scroll } from "@/lib/scroll";
 import { cx } from "@/lib/utils";
 
 /**
@@ -300,47 +301,87 @@ export function BackToTop() {
   );
 }
 
-/* ──────────────────────────────────────────────────── scroll-linked rail ── */
+/* ──────────────────────────────────────────────────────── scroll director ── */
 
 /**
- * Writes normalised scroll velocity into a CSS custom property on <html>.
+ * The page's single scroll loop.
  *
- * One listener, one property, and any number of effects can read it — the
- * marquee leans into the scroll direction, and the value decays back to rest
- * when the reader stops. Doing this once centrally avoids every animated
- * element attaching its own scroll listener.
+ * Publishes scroll state to two places: the shared `scroll` store in
+ * lib/scroll.ts, which the WebGL lattice and the ambient canvas read inside
+ * their own frame loops, and four CSS custom properties on <html>, which the
+ * stylesheet reads for velocity-linked motion.
+ *
+ *   --scroll-velocity   signed, -1..1   direction-aware effects
+ *   --scroll-speed      absolute, 0..1  magnitude effects (skew)
+ *   --scroll-progress   0..1            page position
+ *   --hero-exit         0..1            first viewport traversed
+ *
+ * Doing this once centrally is the difference between one rAF loop and five.
+ * Everything else scroll-reactive on the site now reads a value rather than
+ * attaching its own listener.
  */
-export function ScrollVelocity() {
+export function ScrollDirector() {
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const root = document.documentElement;
+
+    const write = (name: string, value: number) =>
+      root.style.setProperty(name, value.toFixed(4));
+
+    const measure = (y: number) => {
+      const scrollable = Math.max(1, root.scrollHeight - window.innerHeight);
+      scroll.y = y;
+      scroll.progress = Math.min(1, y / scrollable);
+      scroll.heroExit = Math.min(1, y / Math.max(1, window.innerHeight));
+      write("--scroll-progress", scroll.progress);
+      write("--hero-exit", scroll.heroExit);
+    };
+
+    if (reduced) {
+      // Position still publishes, so scroll-linked layout stays correct.
+      // Velocity never does, so nothing skews or distorts.
+      const onScroll = () => measure(window.scrollY);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return () => window.removeEventListener("scroll", onScroll);
+    }
 
     let last = window.scrollY;
     let velocity = 0;
     let raf = 0;
 
     const loop = () => {
-      const current = window.scrollY;
-      const delta = current - last;
-      last = current;
+      const y = window.scrollY;
+      const delta = y - last;
+      last = y;
 
-      // Blend toward the new delta, then decay, so the value eases rather
-      // than spiking on every frame.
+      // Blend toward the new delta, then decay. Without the decay the value
+      // snaps to zero the instant scrolling stops, which reads as a jolt.
       velocity += (delta - velocity) * 0.16;
-      velocity *= 0.92;
+      velocity *= 0.9;
 
-      const normalised = Math.max(-1, Math.min(1, velocity / 26));
-      document.documentElement.style.setProperty(
-        "--scroll-velocity",
-        normalised.toFixed(3),
-      );
+      scroll.velocity = Math.max(-1, Math.min(1, velocity / 26));
+      scroll.speed = Math.abs(scroll.velocity);
+
+      write("--scroll-velocity", scroll.velocity);
+      write("--scroll-speed", scroll.speed);
+      measure(y);
 
       raf = requestAnimationFrame(loop);
     };
 
     raf = requestAnimationFrame(loop);
+
     return () => {
       cancelAnimationFrame(raf);
-      document.documentElement.style.removeProperty("--scroll-velocity");
+      for (const name of [
+        "--scroll-velocity",
+        "--scroll-speed",
+        "--scroll-progress",
+        "--hero-exit",
+      ]) {
+        root.style.removeProperty(name);
+      }
     };
   }, []);
 

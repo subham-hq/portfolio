@@ -27,30 +27,49 @@ import { cx } from "@/lib/utils";
  * back on their next visit — that first gesture is enough for the browser.
  *
  * ── The sound ──────────────────────────────────────────────────────────────
- * A2 root with a fifth and an octave above it, slightly detuned so the tuning
- * beats very slowly against itself. A lowpass filter drifts on a ~40 second
- * LFO, which is what stops it reading as a flat test tone. Master gain sits at
- * 0.045: audible on speakers, never intrusive.
+ * Five layers, tuned for a ship's-hold register rather than a warm pad:
+ *
+ *   SUB      E1 sine at 41.2Hz — felt more than heard, gives the bed weight.
+ *   ENGINE   Two sawtooths a fifth apart through a resonant lowpass. The
+ *            resonance is what makes it metallic instead of soft, and the
+ *            filter is swept by a 55-second LFO so the timbre opens and
+ *            closes rather than sitting still.
+ *   AIR      Bandpassed white noise at very low gain — hull static. This is
+ *            the layer that makes it read as a place rather than a chord.
+ *   DRIFT    A detuned octave that beats slowly against the engine, so the
+ *            tuning is never quite settled.
+ *   PING     A sine with a fast exponential decay, fired at random intervals
+ *            between 11 and 23 seconds. Sparse and quiet: the ear catches it
+ *            once, then stops expecting it, which is what stops the loop from
+ *            becoming a loop.
+ *
+ * Master gain 0.04. Everything is scheduled on the AudioContext clock rather
+ * than setInterval, so the pings do not drift when the main thread is busy.
  */
 
 const STORAGE_KEY = "ambient-audio";
 
-/** Root, fifth, octave, and a distant shimmer. Detunes are in cents. */
-const VOICES: { frequency: number; detune: number; gain: number }[] = [
-  { frequency: 55, detune: 0, gain: 1 },
-  { frequency: 82.41, detune: -4, gain: 0.55 },
-  { frequency: 110, detune: 5, gain: 0.34 },
-  { frequency: 164.81, detune: -7, gain: 0.14 },
-];
+const MASTER_GAIN = 0.04;
+const FADE_IN = 2.6;
+const FADE_OUT = 1.0;
 
-const MASTER_GAIN = 0.045;
-const FADE_IN = 2.2;
-const FADE_OUT = 0.9;
+/** Sparse sonar ping. Random interval, in seconds. */
+const PING_MIN = 11;
+const PING_MAX = 23;
 
 interface Graph {
   context: AudioContext;
   master: GainNode;
   stop: () => void;
+}
+
+/** Short burst of noise, used as the source for the hull-static layer. */
+function noiseBuffer(context: AudioContext): AudioBuffer {
+  const length = context.sampleRate * 3;
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+  return buffer;
 }
 
 function buildGraph(): Graph | null {
@@ -61,33 +80,38 @@ function buildGraph(): Graph | null {
   if (!Ctor) return null;
 
   const context = new Ctor();
+  const stoppable: { stop: (when?: number) => void }[] = [];
 
   const master = context.createGain();
   master.gain.value = 0;
   master.connect(context.destination);
 
-  const filter = context.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 420;
-  filter.Q.value = 0.7;
-  filter.connect(master);
+  // ── ENGINE ───────────────────────────────────────────────────────────────
+  // Resonant lowpass. Q of 6 is the whole character: at 1 this is a warm pad,
+  // at 6 it rings, which is what reads as machinery.
+  const engineFilter = context.createBiquadFilter();
+  engineFilter.type = "lowpass";
+  engineFilter.frequency.value = 260;
+  engineFilter.Q.value = 6;
+  engineFilter.connect(master);
 
-  // Slow filter sweep. Without it the drone is a static tone; with it the
-  // texture opens and closes over about forty seconds.
-  const lfo = context.createOscillator();
-  lfo.type = "sine";
-  lfo.frequency.value = 0.025;
-  const lfoDepth = context.createGain();
-  lfoDepth.gain.value = 190;
-  lfo.connect(lfoDepth);
-  lfoDepth.connect(filter.frequency);
-  lfo.start();
+  const sweep = context.createOscillator();
+  sweep.type = "sine";
+  sweep.frequency.value = 0.018;
+  const sweepDepth = context.createGain();
+  sweepDepth.gain.value = 210;
+  sweep.connect(sweepDepth);
+  sweepDepth.connect(engineFilter.frequency);
+  sweep.start();
+  stoppable.push(sweep);
 
-  const oscillators: OscillatorNode[] = [lfo];
-
-  for (const voice of VOICES) {
+  for (const voice of [
+    { frequency: 82.41, detune: 0, gain: 0.5 },
+    { frequency: 123.47, detune: -6, gain: 0.28 },
+    { frequency: 164.81, detune: 9, gain: 0.14 },
+  ]) {
     const osc = context.createOscillator();
-    osc.type = "sine";
+    osc.type = "sawtooth";
     osc.frequency.value = voice.frequency;
     osc.detune.value = voice.detune;
 
@@ -95,18 +119,94 @@ function buildGraph(): Graph | null {
     gain.gain.value = voice.gain;
 
     osc.connect(gain);
-    gain.connect(filter);
+    gain.connect(engineFilter);
     osc.start();
-    oscillators.push(osc);
+    stoppable.push(osc);
   }
+
+  // ── SUB ──────────────────────────────────────────────────────────────────
+  const sub = context.createOscillator();
+  sub.type = "sine";
+  sub.frequency.value = 41.2;
+  const subGain = context.createGain();
+  subGain.gain.value = 0.85;
+  sub.connect(subGain);
+  subGain.connect(master);
+  sub.start();
+  stoppable.push(sub);
+
+  // ── AIR ──────────────────────────────────────────────────────────────────
+  const noise = context.createBufferSource();
+  noise.buffer = noiseBuffer(context);
+  noise.loop = true;
+
+  const airFilter = context.createBiquadFilter();
+  airFilter.type = "bandpass";
+  airFilter.frequency.value = 900;
+  airFilter.Q.value = 0.9;
+
+  const airGain = context.createGain();
+  airGain.gain.value = 0.05;
+
+  // Slow amplitude breathing on the static, so it is not a flat hiss.
+  const breath = context.createOscillator();
+  breath.type = "sine";
+  breath.frequency.value = 0.06;
+  const breathDepth = context.createGain();
+  breathDepth.gain.value = 0.025;
+  breath.connect(breathDepth);
+  breathDepth.connect(airGain.gain);
+  breath.start();
+  stoppable.push(breath);
+
+  noise.connect(airFilter);
+  airFilter.connect(airGain);
+  airGain.connect(master);
+  noise.start();
+  stoppable.push(noise);
+
+  // ── PING ─────────────────────────────────────────────────────────────────
+  // Scheduled recursively on the audio clock. Each ping creates and disposes
+  // its own nodes, which is the correct pattern for one-shots — a permanent
+  // oscillator gated by a gain node leaks CPU for a sound heard twice a minute.
+  let pingTimer: number | undefined;
+
+  const ping = () => {
+    const now = context.currentTime;
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+
+    osc.type = "sine";
+    // Alternates between two pitches a fourth apart so consecutive pings are
+    // not identical.
+    osc.frequency.setValueAtTime(Math.random() > 0.5 ? 1174.66 : 880, now);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.16, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start(now);
+    osc.stop(now + 2.8);
+
+    const wait = PING_MIN + Math.random() * (PING_MAX - PING_MIN);
+    pingTimer = window.setTimeout(ping, wait * 1000);
+  };
+
+  pingTimer = window.setTimeout(
+    ping,
+    (PING_MIN + Math.random() * (PING_MAX - PING_MIN)) * 1000,
+  );
 
   return {
     context,
     master,
     stop: () => {
-      for (const osc of oscillators) {
+      if (pingTimer !== undefined) clearTimeout(pingTimer);
+      for (const node of stoppable) {
         try {
-          osc.stop();
+          node.stop();
         } catch {
           // Already stopped — nothing to do.
         }

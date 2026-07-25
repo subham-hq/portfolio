@@ -1,8 +1,9 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { scroll } from "@/lib/scroll";
 
 /**
  * HERO SCENE — "Lattice"
@@ -15,6 +16,19 @@ import * as THREE from "three";
  * each other, a schema, a dependency graph, a network. It is about the
  * engineer, not about any single repository, so it stays correct when the
  * projects change.
+ *
+ * ── The scroll dissolve ────────────────────────────────────────────────────
+ * As the reader leaves the first viewport the graph comes apart: edges fade
+ * first, then the nodes push outward along their own radius, shrink, and go
+ * out. What is left reads as part of the starfield behind the page.
+ *
+ * The intent is specific. The site opens on a system that is whole and
+ * connected; scrolling takes it apart into its constituent points, which are
+ * indistinguishable from the ambient field the rest of the page sits on. The
+ * two signature elements become one thing rather than two unrelated effects.
+ *
+ * Driven by scroll position, not time — it tracks the reader exactly, runs
+ * backwards when they scroll up, and holds still when they stop.
  *
  * Performance budget, because a 3D hero has to earn its place:
  *   · 2 draw calls total — one InstancedMesh for every node, one LineSegments
@@ -86,6 +100,16 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
   const damped = useRef(new THREE.Vector2());
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Materials are held by ref so the dissolve can write straight to them,
+  // rather than re-rendering the component sixty times a second.
+  const nodeMaterial = useRef<THREE.MeshStandardMaterial>(null);
+  const edgeMaterial = useRef<THREE.LineBasicMaterial>(null);
+
+  // Damped copy of scroll.heroExit. The raw value is already smooth, but a
+  // second pass keeps the scatter from stuttering if a frame is dropped.
+  const dissolve = useRef(0);
+  const scatter = useMemo(() => new THREE.Vector3(), []);
+
   // A small share of nodes are tinted with the operations accent, so the two
   // threads of the story are present in the object itself rather than only in
   // the copy beside it.
@@ -106,24 +130,56 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
    * rendered stacked at the origin. useLayoutEffect is the correct hook: it
    * runs after commit and before paint, so there is no visible flash.
    */
+  /**
+   * Write every instance matrix for a given dissolve amount.
+   *
+   * At 0 the nodes sit exactly where the lattice put them. As it rises each
+   * node travels outward along its own radius — so the structure expands from
+   * its centre rather than drifting in one direction — and shrinks toward
+   * nothing. The per-node offset means they do not all leave together.
+   */
+  const writeInstances = useCallback(
+    (amount: number) => {
+      const instanced = mesh.current;
+      if (!instanced) return;
+
+      for (let i = 0; i < points.length; i++) {
+        const point = points[i]!;
+        // Stagger: outer nodes begin leaving before inner ones.
+        const stagger = 0.55 + seeded(i + 41) * 0.45;
+        const local = Math.max(0, Math.min(1, (amount - (1 - stagger) * 0.35) / stagger));
+        const push = local * local * 7.5;
+
+        scatter.copy(point).normalize().multiplyScalar(push);
+        dummy.position.copy(point).add(scatter);
+        dummy.scale.setScalar((0.55 + seeded(i + 17) * 0.5) * (1 - local * 0.85));
+        dummy.updateMatrix();
+        instanced.setMatrixAt(i, dummy.matrix);
+      }
+
+      instanced.instanceMatrix.needsUpdate = true;
+    },
+    [points, dummy, scatter],
+  );
+
   useLayoutEffect(() => {
     const instanced = mesh.current;
     if (!instanced) return;
 
-    points.forEach((point, i) => {
-      dummy.position.copy(point);
-      dummy.scale.setScalar(0.55 + seeded(i + 17) * 0.5);
-      dummy.updateMatrix();
-      instanced.setMatrixAt(i, dummy.matrix);
-      // setColorAt writes to instanceColor. Attaching a colour attribute to the
-      // geometry instead would apply one colour to every instance — the
+    writeInstances(0);
+
+    for (let i = 0; i < points.length; i++) {
+      // setColorAt writes to instanceColor. Attaching a colour attribute to
+      // the geometry instead would apply one colour to every instance — the
       // geometry is shared — and its length would not match the vertex count.
       instanced.setColorAt(i, colours[i] ?? colours[0]!);
-    });
-    instanced.instanceMatrix.needsUpdate = true;
+    }
     if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true;
-    instanced.computeBoundingSphere();
-  }, [points, dummy, colours]);
+
+    // The scatter takes nodes well outside the original bounds; without a
+    // generous bounding sphere they would be culled mid-flight.
+    instanced.boundingSphere = new THREE.Sphere(new THREE.Vector3(), RADIUS + 9);
+  }, [points, colours, writeInstances]);
 
   // Geometry built imperatively is not owned by R3F, so we dispose it.
   useLayoutEffect(() => () => edges.dispose(), [edges]);
@@ -145,6 +201,31 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
 
     node.rotation.x = -damped.current.y;
     node.position.x = damped.current.x * 0.6;
+
+    // ── Scroll dissolve ──────────────────────────────────────────────────
+    const targetDissolve = scroll.heroExit;
+    dissolve.current += (targetDissolve - dissolve.current) * 0.12;
+
+    // Skip the instance rewrite entirely once settled at either end. Below
+    // 0.002 of change there is nothing to see, and this is 140 matrix writes.
+    if (Math.abs(targetDissolve - dissolve.current) > 0.002 || dissolve.current > 0.001) {
+      writeInstances(dissolve.current);
+    }
+
+    // Edges go first and go faster: the connections break before the nodes
+    // scatter, which is what makes it read as a structure coming apart rather
+    // than a group of dots moving.
+    if (edgeMaterial.current) {
+      edgeMaterial.current.opacity = 0.22 * Math.max(0, 1 - dissolve.current * 2.1);
+    }
+    if (nodeMaterial.current) {
+      nodeMaterial.current.opacity = Math.max(0, 1 - dissolve.current * 1.25);
+    }
+
+    // Scroll speed spins the graph. Scrolling hard visibly drives the object,
+    // which ties the page's motion to its centrepiece rather than leaving them
+    // as two unrelated animations.
+    node.rotation.y += scroll.velocity * step * 1.4;
   });
 
   return (
@@ -165,6 +246,7 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
 
         <lineSegments geometry={edges} frustumCulled={false}>
           <lineBasicMaterial
+            ref={edgeMaterial}
             color={signal}
             transparent
             opacity={0.22}

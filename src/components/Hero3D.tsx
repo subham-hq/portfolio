@@ -202,7 +202,7 @@ export function Hero3D() {
   return (
     <div
       ref={container}
-      className="pointer-events-none relative h-[190px] w-full sm:h-[300px] lg:h-[460px]"
+      className="hero-stage pointer-events-none relative h-[190px] w-full sm:h-[300px] lg:h-[460px]"
     >
       {enabled ? (
         <Canvas
