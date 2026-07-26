@@ -20,5 +20,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Note: this licence covers the source code. The written content, résumé and
-personal likeness are not licensed for reuse.
+---
+
+SCOPE OF THIS LICENCE
+
+The MIT grant above applies to the source code in this repository and to
+nothing else. The following are NOT covered and are NOT licensed for reuse:
+
+  * Written content — the copy in src/content/, the case studies, the bios
+  * The résumé, photographs, and personal likeness
+  * public/ambient.mp3 — licensed to the repository owner from a third party
+    under terms that do not permit sublicensing or redistribution. Replace
+    this file with your own audio if you fork this project.
+
+If you build on this code, swap the contents of src/content/ and the files in
+public/ for your own before publishing.

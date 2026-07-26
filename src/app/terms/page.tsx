@@ -29,11 +29,22 @@ export default function TermsPage() {
           </SpecRow>
           <SpecRow label="Source code">
             The code behind this site is MIT licensed and available on GitHub. Take it,
-            learn from it, build on it.
+            learn from it, build on it. The licence covers the code and nothing else — not
+            the writing, the images, or the audio.
           </SpecRow>
           <SpecRow label="Content and identity">
             The written content, résumé, photographs and personal likeness are not
             licensed for reuse. Please do not republish them as your own.
+          </SpecRow>
+          <SpecRow label="Audio">
+            The ambient track is licensed to me from a third party. That licence does not
+            let me pass it on, so it is excluded from the MIT grant above. If you are
+            reading the repository, replace the file rather than reusing it.
+          </SpecRow>
+          <SpecRow label="Booking and messages">
+            Scheduling runs on Cal.com and is subject to their terms. Booking a call or
+            sending a message starts a conversation and nothing more — neither of us is
+            committed to anything, and either can cancel.
           </SpecRow>
           <SpecRow label="External links">
             Links to GitHub, certificate issuers and other sites are provided for
