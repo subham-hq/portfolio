@@ -1,5 +1,13 @@
 "use client";
 
+// Importing a plain constants module is safe here even though this file
+// replaces the root layout. The inline styles below exist because globals.css
+// is imported *by* the layout that just failed; a module of string literals has
+// no such dependency. Hard-coding the address instead meant it went stale the
+// moment the contact address changed, which is exactly the class of bug this
+// project keeps finding.
+import { person } from "@/content/site";
+
 /**
  * Replaces the root layout when the layout itself throws, so it cannot rely on
  * the design system, fonts or any provider being available. Styles are inline
@@ -51,7 +59,7 @@ export default function GlobalError({
           The site failed to load.
         </h1>
         <p style={{ maxWidth: "52ch", color: "#4b5250", marginTop: "1.5rem" }}>
-          Reloading usually fixes it. If it does not, email subham.bh@icloud.com
+          {`Reloading usually fixes it. If it does not, email ${person.email}`}
           {error.digest ? ` and quote reference ${error.digest}.` : "."}
         </p>
         <div style={{ marginTop: "2rem", display: "flex", gap: "0.75rem" }}>

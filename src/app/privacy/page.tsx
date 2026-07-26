@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, SpecRow } from "@/components/primitives";
-import { links, person } from "@/content/site";
+import { emails, person } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -62,8 +62,8 @@ export default function PrivacyPage() {
         <div className="prose-measure text-lead text-fg-muted">
           <p>
             If you have written to me and want that message deleted, email{" "}
-            <a href={links.email} className="link-underline">
-              {person.email}
+            <a href={`mailto:${emails.privacy}`} className="link-underline">
+              {emails.privacy}
             </a>{" "}
             and I will delete it. No form, no process, no verification hoops.
           </p>

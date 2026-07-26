@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, SpecRow } from "@/components/primitives";
-import { links, person } from "@/content/site";
+import { emails, person } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Terms",
@@ -55,8 +55,8 @@ export default function TermsPage() {
             commitment.
           </SpecRow>
           <SpecRow label="Questions">
-            <a href={links.email} className="link-underline">
-              {person.email}
+            <a href={`mailto:${emails.legal}`} className="link-underline">
+              {emails.legal}
             </a>
           </SpecRow>
         </dl>

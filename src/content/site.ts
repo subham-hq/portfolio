@@ -19,7 +19,7 @@ export const person = {
   coords: "22.6708° N · 87.3200° E",
   timezone: "Asia/Kolkata",
   utcOffset: "UTC+05:30",
-  email: "subham.bh@icloud.com",
+  email: "hello@subhambhattacharya.com",
 } as const;
 
 export const links = {
@@ -31,6 +31,27 @@ export const links = {
   email: `mailto:${person.email}`,
   resume: "/subham-bhattacharya-resume.pdf",
   cal: "https://cal.com/subhambhattacharya/intro",
+} as const;
+
+/**
+ * Addresses published on specific pages. Everything else in the site renders
+ * `person.email`, so that is the one to change if the general address moves.
+ *
+ * Three published, not five. `support@` and `careers@` stay unadvertised: the
+ * first implies a product with users who need help, and the second is the
+ * address a company uses to *receive* applications — publishing it on your own
+ * site makes a recruiter stop and work out whether you are the one hiring.
+ * Their Cloudflare routes can stay active so nothing addressed there bounces.
+ *
+ * `privacy@` and `legal@` are worth publishing on their own pages: both are
+ * real conventions, a GDPR-aware reader looks for the first by name, and
+ * keeping those two out of general mail is genuinely useful when one arrives.
+ */
+export const emails = {
+  /** Privacy page only — data access and deletion requests. */
+  privacy: "privacy@subhambhattacharya.com",
+  /** Terms page only — questions about the terms themselves. */
+  legal: "legal@subhambhattacharya.com",
 } as const;
 
 export const githubUser = "subham-hq";
