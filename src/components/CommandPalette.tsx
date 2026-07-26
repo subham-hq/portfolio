@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { projects } from "@/content/projects";
 import { footerNav, links, nav, person } from "@/content/site";
-import { toggleTheme } from "@/lib/theme";
+import { toggleOrigin, toggleTheme } from "@/lib/theme";
 import { cx } from "@/lib/utils";
 
 /**
@@ -197,8 +197,11 @@ export function CommandPalette() {
           break;
         case "theme":
           // Goes through the shared helper so the header toggle's label, the
-          // stored preference and the browser chrome colour all follow.
-          toggleTheme();
+          // stored preference and the browser chrome colour all follow. The
+          // origin is the header switch rather than the palette row, so the
+          // sweep always appears to come from the control that owns the
+          // setting no matter how it was triggered.
+          toggleTheme(toggleOrigin());
           break;
       }
     },

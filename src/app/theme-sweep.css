@@ -1,0 +1,59 @@
+/* ═════════════════════════════════════════════════════ theme sweep ═══════
+   The new theme arrives as a circle expanding out of the switch, instead of
+   the whole page cutting over at once.
+
+   This file is deliberately tiny. Its only job is to stop the browser doing
+   its own thing; the sweep itself is driven from lib/theme.ts with the Web
+   Animations API.
+
+   That split is not stylistic. The first version of this animated the pseudo-
+   element from CSS keyframes and read the origin, radius and easing out of
+   custom properties. View transition pseudo-elements live in their own tree
+   and do not reliably inherit custom properties from :root — and a `var()`
+   that fails inside a *shorthand* invalidates the entire declaration at
+   computed-value time, computing to `animation: none` rather than falling back.
+   The sweep silently never ran. Passing literal numbers from JavaScript
+   removes every custom property from the path, so there is nothing left to
+   fail to resolve.
+
+   Everything below is still snapshot-only: two static layers and one clip-path.
+   No JavaScript runs per frame, nothing re-renders, and neither the particle
+   canvas nor the WebGL scene repaints during the transition. That is why this
+   stays smooth on a page that would choke on a naive colour transition.
+   ========================================================================== */
+
+/* Scoped to [data-theme-sweep], set by lib/theme.ts for the duration of the
+   transition and removed afterwards, so these rules cannot capture any other
+   view transition added to the site later. */
+
+/* The browser's default is a cross-fade between the two snapshots. Turning it
+   off is what leaves the old theme sitting still underneath while only the new
+   one is revealed — a fade plus a wipe reads as mush. */
+:root[data-theme-sweep]::view-transition-old(root),
+:root[data-theme-sweep]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* The new theme is revealed over the old one, never the other way round, so
+   the effect is identical going dark-to-light and light-to-dark. */
+:root[data-theme-sweep]::view-transition-old(root) {
+  z-index: 1;
+}
+
+:root[data-theme-sweep]::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────
+   applyTheme() already skips startViewTransition entirely under this
+   preference, so no transition is generated and nothing above ever matches.
+   This is a second guarantee: if a future caller forgets the check, the change
+   still lands instantly rather than wiping across the whole screen. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
