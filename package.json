@@ -12,13 +12,10 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
     "check": "npm run typecheck && npm run lint",
     "prepare": "husky || true",
-    "preview": "npx serve out",
-    "prebuild": "node scripts/fetch-github-stats.mjs"
+    "preview": "npx serve out"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
-    "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.0.0",
     "motion": "^11.15.0",
     "next": "^15.5.21",
     "react": "^19.0.0",
