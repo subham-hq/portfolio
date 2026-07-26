@@ -59,26 +59,32 @@ export default async function OpenSourcePage() {
         ) : null}
       </Section>
 
-      <Section title="Contributions">
-        {/* Rendered by GitHub, so it can never disagree with the profile. It is
-            lazy-loaded and carries explicit dimensions, so it costs nothing
-            above the fold and shifts nothing when it arrives. */}
-        <div className="overflow-x-auto rounded-sm border border-rule p-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://ghchart.rshah.org/0f7a72/${githubUser}`}
-            alt={`GitHub contribution graph for ${githubUser}`}
-            width={880}
-            height={128}
-            loading="lazy"
-            decoding="async"
-            className="min-w-[640px]"
-          />
-        </div>
-        <div className="mt-8">
-          <Button href={links.github} variant="outline" external>
-            Full profile on GitHub
-          </Button>
+      {/* This page is the repository list. Contribution data — the graph, the
+          language breakdown, the streak — lives on /github, which builds it
+          from the API at deploy time.
+
+          What used to be here was an <img> pointing at ghchart.rshah.org. That
+          stopped rendering the moment the CSP tightened: with no `img-src`
+          directive, images fall back to `default-src 'self'`, and a
+          third-party host is not 'self'. Rather than re-open the policy for a
+          service outside your control, the page now points at the first-party
+          version — which is also one canonical place for this data instead of
+          two that can drift apart.
+
+          This mirrors /github, which points here for the repositories. */}
+      <Section title="Activity">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <p className="prose-measure text-lead text-fg-muted">
+            The contribution graph, language breakdown and streak are on the GitHub stats
+            page, built from the API at deploy time rather than embedded from a third
+            party.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button href="/github">GitHub stats</Button>
+            <Button href={links.github} variant="outline" external>
+              Full profile
+            </Button>
+          </div>
         </div>
       </Section>
     </div>
