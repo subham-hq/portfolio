@@ -1,27 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type Theme = "light" | "dark";
+import { readTheme, toggleTheme, watchTheme, type Theme } from "@/lib/theme";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
+  // Matches the bootstrap default, so the first paint and the first render
+  // agree and there is nothing to mismatch during hydration.
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const current = document.documentElement.getAttribute("data-theme");
-    setTheme(current === "dark" ? "dark" : "light");
+    setTheme(readTheme());
+    // The ⌘K palette can also change the theme. Watching the attribute rather
+    // than owning the state means this label can never disagree with the page
+    // — which it did: a palette toggle left the button reading the old value,
+    // and its next click then flipped to the wrong one.
+    return watchTheme(setTheme);
   }, []);
 
-  const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    try {
-      localStorage.setItem("theme", next);
-    } catch {
-      // Private mode or blocked storage. The toggle still works for this session.
-    }
-    setTheme(next);
-  };
+  const toggle = () => setTheme(toggleTheme());
 
   return (
     <button

@@ -58,10 +58,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f5f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#080c0c" },
-  ],
+  // A single value, not a prefers-color-scheme pair. The pair keyed the browser
+  // chrome to the OS while the page itself now always starts dark, so anyone on
+  // a light-mode device got a cream band above a dark page on iOS Safari.
+  // applyTheme() rewrites this meta tag when the visitor switches.
+  themeColor: "#080c0c",
   width: "device-width",
   initialScale: 1,
   // Default is `resizes-visual`, which shrinks the visual viewport when the
@@ -72,8 +73,17 @@ export const viewport: Viewport = {
 
 /**
  * Runs before first paint so the correct theme is applied without a flash.
- * Wrapped in try/catch because localStorage throws in some privacy modes and a
- * theme preference is not worth a blank page.
+ *
+ * Dark is the default and the OS preference is deliberately not consulted. The
+ * site is designed dark first — the starfield, the vignette and the lattice all
+ * assume it — so a visitor whose laptop is in light mode should still see it as
+ * intended until they choose otherwise. Light applies only when it is the
+ * explicitly stored choice.
+ *
+ * The localStorage read is wrapped because it throws in some privacy modes, and
+ * a remembered preference is not worth a blank page. Note that `t` defaults to
+ * "dark" *before* the try, so the failure path lands on dark rather than on the
+ * old behaviour of falling back to light.
  *
  * It also sets data-motion="on", which is the gate for every reveal animation.
  * The attribute is set outside the try/catch: if storage is blocked the theme
@@ -82,7 +92,7 @@ export const viewport: Viewport = {
  * being stuck in its hidden start state.
  */
 const themeInit = `
-(function(){try{var s=localStorage.getItem("theme");var m=window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.setAttribute("data-theme",s||(m?"dark":"light"));}catch(e){document.documentElement.setAttribute("data-theme","light");}document.documentElement.setAttribute("data-motion","on");})();
+(function(){var t="dark";try{if(localStorage.getItem("theme")==="light")t="light";}catch(e){}var r=document.documentElement;r.setAttribute("data-theme",t);r.setAttribute("data-motion","on");})();
 `;
 
 const jsonLd = {

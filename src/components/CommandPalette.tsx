@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { projects } from "@/content/projects";
 import { footerNav, links, nav, person } from "@/content/site";
+import { toggleTheme } from "@/lib/theme";
 import { cx } from "@/lib/utils";
 
 /**
@@ -194,19 +195,11 @@ export function CommandPalette() {
             () => setCopied(false),
           );
           break;
-        case "theme": {
-          const next =
-            document.documentElement.getAttribute("data-theme") === "dark"
-              ? "light"
-              : "dark";
-          document.documentElement.setAttribute("data-theme", next);
-          try {
-            localStorage.setItem("theme", next);
-          } catch {
-            // Blocked storage. The theme still changes for this session.
-          }
+        case "theme":
+          // Goes through the shared helper so the header toggle's label, the
+          // stored preference and the browser chrome colour all follow.
+          toggleTheme();
           break;
-        }
       }
     },
     [close, router],

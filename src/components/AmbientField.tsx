@@ -77,15 +77,39 @@ function seedStars(width: number, height: number): Particle[] {
   });
 }
 
-function seedGrid(width: number, height: number): Particle[] {
-  const spacing = 38;
-  const cols = Math.ceil(width / spacing) + 1;
-  const rows = Math.ceil(height / spacing) + 1;
+/**
+ * The grid is structural rather than decorative — it has to reach the bottom
+ * of the viewport or the page looks half-finished. The starfield's 420-particle
+ * cap is a density choice and can be applied bluntly; applying the same cap
+ * here silently truncated the grid, and at 1920x1080 it was covering only the
+ * top 266 pixels of a 1080-pixel screen.
+ *
+ * So the pitch adapts instead: start at 38px and open it up until the grid
+ * fits the budget. Large screens get a slightly sparser grid, which is the
+ * right answer visually anyway — 38px across an ultrawide reads as clutter.
+ */
+const GRID_BUDGET = 1800;
+const GRID_MIN_PITCH = 38;
+
+function seedGrid(
+  width: number,
+  height: number,
+): { particles: Particle[]; spacing: number } {
+  let spacing = GRID_MIN_PITCH;
+
+  // One extra column and row on each side, so the scroll offset below can
+  // never expose an empty strip along an edge.
+  const count = (pitch: number) =>
+    (Math.ceil(width / pitch) + 3) * (Math.ceil(height / pitch) + 3);
+
+  while (count(spacing) > GRID_BUDGET) spacing += 4;
+
+  const cols = Math.ceil(width / spacing) + 2;
+  const rows = Math.ceil(height / spacing) + 2;
   const particles: Particle[] = [];
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      if (particles.length >= MAX_PARTICLES) return particles;
+  for (let row = -1; row < rows; row++) {
+    for (let col = -1; col < cols; col++) {
       particles.push({
         x: col * spacing,
         y: row * spacing,
@@ -95,7 +119,8 @@ function seedGrid(width: number, height: number): Particle[] {
       });
     }
   }
-  return particles;
+
+  return { particles, spacing };
 }
 
 export function AmbientField() {
@@ -113,6 +138,7 @@ export function AmbientField() {
     let width = 0;
     let height = 0;
     let particles: Particle[] = [];
+    let gridSpacing = GRID_MIN_PITCH;
     let mode: "dark" | "light" =
       document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
     let ink = "#5a615f";
@@ -136,7 +162,13 @@ export function AmbientField() {
     };
 
     const seed = () => {
-      particles = mode === "dark" ? seedStars(width, height) : seedGrid(width, height);
+      if (mode === "dark") {
+        particles = seedStars(width, height);
+        return;
+      }
+      const grid = seedGrid(width, height);
+      particles = grid.particles;
+      gridSpacing = grid.spacing;
     };
 
     const resize = () => {
@@ -161,8 +193,22 @@ export function AmbientField() {
       damped.y += (pointer.y - damped.y) * 0.09;
 
       // Rises from 0 to 1 across the first viewport, matching the lattice
-      // dissolve exactly. Both read the same store.
+      // dissolve exactly. Both read the same store. Saturates at 1 — it drives
+      // the hero handoff only, never the ongoing motion.
       const arrival = scroll.heroExit;
+
+      // Scroll-linked offset, in pixels, for the whole document rather than
+      // the first screen. This is the part that was missing: drift used to be
+      // purely time-based, with `arrival` as a speed multiplier — so once the
+      // hero was gone that multiplier pinned at 1 and nothing on the page
+      // responded to scrolling again. Deriving position from scroll.y instead
+      // means the field tracks the reader the whole way down and reverses when
+      // they scroll back up.
+      //
+      // Raw scroll.y rather than scroll.progress, deliberately: the feel
+      // should be the same on a short page and a long one, so the coupling is
+      // per pixel scrolled, not per percent of document.
+      const gridOffset = (((scroll.y * 0.09) % gridSpacing) + gridSpacing) % gridSpacing;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]!;
@@ -170,12 +216,23 @@ export function AmbientField() {
         let x = p.x;
         let y = p.y;
 
-        if (mode === "dark" && !reduced) {
-          // Parallax drift, scaled by depth. Wraps rather than resetting so
-          // there is no visible seam. Drift accelerates slightly as the hero
-          // dissolves, so the field feels like it is absorbing something.
-          x = (p.x + t * (4 + p.z * 14) * (1 + arrival * 0.5)) % (width + 40);
-          y = p.y + Math.sin(t * 0.18 + p.phase) * (1 + p.z * 3);
+        if (!reduced) {
+          if (mode === "dark") {
+            // Two components. The time drift keeps the sky alive when the page
+            // is still; the scroll term makes it a parallax layer while the
+            // page moves. Both scale with depth, so near stars travel further
+            // than far ones and the field reads as having volume.
+            const drift = t * (4 + p.z * 14);
+            const parallax = scroll.y * (0.05 + p.z * 0.17);
+            x = (p.x + drift + parallax) % (width + 40);
+            y = p.y + Math.sin(t * 0.18 + p.phase) * (1 + p.z * 3);
+          } else {
+            // The measurement grid slides with scroll too, so light mode is
+            // not the one theme where scrolling does nothing. Wrapped on the
+            // grid pitch, which keeps it a regular grid at every offset
+            // instead of sliding out of alignment.
+            x = p.x + gridOffset;
+          }
         }
 
         // Cursor displacement — the shared interaction across both modes.
