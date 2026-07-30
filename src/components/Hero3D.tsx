@@ -7,12 +7,12 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Gate and fallback for the 3D hero.
  *
- * The scene is code-split and only mounted when it is genuinely appropriate.
- * It does not load at all when the viewport is under 768px, when
- * prefers-reduced-motion is set, when the device reports limited memory, or
- * when WebGL is unavailable. In every one of those cases the static SVG below
- * renders instead — the same composition, a fraction of a kilobyte. Nobody
- * sees an empty box and nobody downloads a renderer they cannot use.
+ * The scene is code-split and only mounted when it is genuinely appropriate:
+ * not on metered or 2G connections, not under prefers-reduced-motion, not on
+ * low-memory or low-core devices, and not without WebGL. In every one of those
+ * cases the static SVG below renders instead — the same composition, a fraction
+ * of a kilobyte. Nobody sees an empty box and nobody downloads a renderer they
+ * cannot use.
  */
 
 const Lattice = dynamic(() => import("./Lattice").then((m) => m.Lattice), {
@@ -122,16 +122,52 @@ export function Hero3D() {
   );
   // "always" while on screen, "never" once scrolled past or the tab is hidden.
   const [frameloop, setFrameloop] = useState<"always" | "never">("never");
+  // Drives scene density only. Desktop keeps the full 140-node scene; a phone
+  // gets a thinner one so the same object stays legible in a much smaller box.
+  const [compact, setCompact] = useState(false);
 
   useEffect(() => {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sizeQuery = window.matchMedia("(min-width: 768px)");
 
+    /**
+     * Screen width used to gate this, which was the wrong signal.
+     *
+     * The scene is 140 instanced nodes and 260 line segments in two draw
+     * calls. Any phone of the last several years renders that without
+     * noticing — width was standing in for "probably a weak device", and it is
+     * a poor proxy. What actually mattered was the ~90 kB Three.js download,
+     * so the checks below test for that directly: metered connections, slow
+     * networks, low memory and low core counts. A modern phone on wifi passes
+     * and gets the real animation; a budget device on 2G still gets the static
+     * fallback, which is the outcome the width check was reaching for.
+     */
     const capable = (() => {
       try {
-        // navigator.deviceMemory is Chromium-only; absent means "assume fine".
-        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-        if (typeof memory === "number" && memory < 4) return false;
+        const nav = navigator as Navigator & {
+          deviceMemory?: number;
+          connection?: { saveData?: boolean; effectiveType?: string };
+        };
+
+        // Explicit user preference to conserve data. Never override it.
+        if (nav.connection?.saveData) return false;
+
+        // 2G and slow-3G: 90 kB is a real wait, and the payoff is decoration.
+        const effective = nav.connection?.effectiveType ?? "";
+        if (effective === "slow-2g" || effective === "2g") return false;
+
+        // Chromium-only. Absent means "assume fine" rather than "assume bad",
+        // since Safari never reports it and iPhones are not the weak case.
+        if (typeof nav.deviceMemory === "number" && nav.deviceMemory < 4) return false;
+
+        // A rough CPU-class floor. Below four cores is old enough that the
+        // download and the render are both a bad trade.
+        if (
+          typeof navigator.hardwareConcurrency === "number" &&
+          navigator.hardwareConcurrency < 4
+        ) {
+          return false;
+        }
+
         const probe = document.createElement("canvas");
         return Boolean(
           window.WebGLRenderingContext &&
@@ -142,14 +178,17 @@ export function Hero3D() {
       }
     })();
 
-    const evaluate = () =>
-      setEnabled(capable && sizeQuery.matches && !motionQuery.matches);
+    const widthQuery = window.matchMedia("(max-width: 767px)");
+    const evaluate = () => {
+      setEnabled(capable && !motionQuery.matches);
+      setCompact(widthQuery.matches);
+    };
 
     evaluate();
     setAccents(readAccents());
 
     motionQuery.addEventListener("change", evaluate);
-    sizeQuery.addEventListener("change", evaluate);
+    widthQuery.addEventListener("change", evaluate);
 
     const themeObserver = new MutationObserver(() => setAccents(readAccents()));
     themeObserver.observe(document.documentElement, {
@@ -159,7 +198,7 @@ export function Hero3D() {
 
     return () => {
       motionQuery.removeEventListener("change", evaluate);
-      sizeQuery.removeEventListener("change", evaluate);
+      widthQuery.removeEventListener("change", evaluate);
       themeObserver.disconnect();
     };
   }, []);
@@ -211,7 +250,11 @@ export function Hero3D() {
           frameloop={frameloop}
           gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
         >
-          <Lattice signal={accents.signal} ledger={accents.ledger} />
+          <Lattice
+            signal={accents.signal}
+            ledger={accents.ledger}
+            density={compact ? 0.6 : 1}
+          />
         </Canvas>
       ) : (
         <LatticeFallback />

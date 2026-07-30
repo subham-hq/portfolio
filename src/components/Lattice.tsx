@@ -39,6 +39,14 @@ import { scroll } from "@/lib/scroll";
  *     what it creates from JSX, but geometry built imperatively is ours.
  */
 
+/**
+ * Full-size scene. This is what desktop renders, unchanged.
+ *
+ * `density` below scales it down for a small viewport — not for performance
+ * (two draw calls is nothing anywhere) but for composition: 140 nodes inside a
+ * 353x190 hero box reads as clutter rather than as a structure. Fewer nodes at
+ * the same radius is the same object, legible at a smaller size.
+ */
 const NODE_COUNT = 140;
 const RADIUS = 4.2;
 const LINK_DISTANCE = 1.5;
@@ -51,15 +59,15 @@ function seeded(i: number): number {
   return x - Math.floor(x);
 }
 
-function buildLattice() {
+function buildLattice(nodeCount: number, maxLinks: number) {
   const points: THREE.Vector3[] = [];
   const golden = Math.PI * (3 - Math.sqrt(5));
 
   // Fibonacci sphere, then pulled inward by a seeded amount so the volume is
   // filled rather than only its shell. A hollow shell reads as a ball; a filled
   // volume reads as a structure.
-  for (let i = 0; i < NODE_COUNT; i++) {
-    const y = 1 - (i / (NODE_COUNT - 1)) * 2;
+  for (let i = 0; i < nodeCount; i++) {
+    const y = 1 - (i / (nodeCount - 1)) * 2;
     const r = Math.sqrt(Math.max(0, 1 - y * y));
     const theta = golden * i;
     const depth = 0.45 + seeded(i) * 0.55;
@@ -80,7 +88,7 @@ function buildLattice() {
       const b = points[j]!;
       if (a.distanceTo(b) < LINK_DISTANCE) {
         positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
-        if (++links >= MAX_LINKS) break outer;
+        if (++links >= maxLinks) break outer;
       }
     }
   }
@@ -91,8 +99,23 @@ function buildLattice() {
   return { points, edges };
 }
 
-export function Lattice({ signal, ledger }: { signal: string; ledger: string }) {
-  const { points, edges } = useMemo(buildLattice, []);
+export function Lattice({
+  signal,
+  ledger,
+  /** 1 is the full scene. Lower values thin it out for a small viewport. */
+  density = 1,
+}: {
+  signal: string;
+  ledger: string;
+  density?: number;
+}) {
+  const nodeCount = Math.max(40, Math.round(NODE_COUNT * density));
+  const maxLinks = Math.max(60, Math.round(MAX_LINKS * density));
+
+  const { points, edges } = useMemo(
+    () => buildLattice(nodeCount, maxLinks),
+    [nodeCount, maxLinks],
+  );
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.InstancedMesh>(null);
 
@@ -116,10 +139,10 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
   const colours = useMemo(() => {
     const primary = new THREE.Color(signal);
     const secondary = new THREE.Color(ledger);
-    return Array.from({ length: NODE_COUNT }, (_, i) =>
+    return Array.from({ length: nodeCount }, (_, i) =>
       seeded(i + 91) > 0.86 ? secondary : primary,
     );
-  }, [signal, ledger]);
+  }, [signal, ledger, nodeCount]);
 
   /**
    * Instance matrices must be written after the ref is attached.
@@ -237,7 +260,7 @@ export function Lattice({ signal, ledger }: { signal: string; ledger: string }) 
       <group ref={group}>
         <instancedMesh
           ref={mesh}
-          args={[undefined, undefined, NODE_COUNT]}
+          args={[undefined, undefined, nodeCount]}
           frustumCulled={false}
         >
           <icosahedronGeometry args={[0.075, 1]} />
