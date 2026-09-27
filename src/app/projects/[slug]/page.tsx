@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { StateMachine } from "@/components/StateMachine";
+import { VideoEmbed } from "@/components/VideoEmbed";
 import { Button, Section, SpecRow, Tag } from "@/components/primitives";
 import { getProject, projects } from "@/content/projects";
 
@@ -43,16 +44,38 @@ export default async function ProjectPage({ params }: Params) {
         <h1 className="font-display mt-6 text-h1">{project.name}</h1>
         <p className="prose-measure mt-8 text-lead text-fg-muted">{project.overview}</p>
         <div className="mt-9 flex flex-wrap gap-3">
-          <Button href={project.repo} external>
-            Source
-          </Button>
+          {project.repo ? (
+            <Button href={project.repo} external>
+              Source
+            </Button>
+          ) : null}
           {project.demo ? (
             <Button href={project.demo} variant="outline" external>
               Demo
             </Button>
           ) : null}
         </div>
+
+        {/* A missing source link reads as a gap unless it is explained. One
+            line turns "there is nothing to show" into "this was a decision". */}
+        {!project.repo && project.repoNote ? (
+          <p className="label mt-5">{project.repoNote}</p>
+        ) : null}
       </header>
+
+      {project.video ? (
+        <Section title="Demo">
+          <FadeIn>
+            <VideoEmbed
+              id={project.video.id}
+              title={project.video.title}
+              poster={project.video.poster}
+              caption={project.video.caption}
+              className="max-w-4xl"
+            />
+          </FadeIn>
+        </Section>
+      ) : null}
 
       <Section title="Stack">
         <div className="flex flex-wrap gap-2">
@@ -107,11 +130,13 @@ export default async function ProjectPage({ params }: Params) {
               system, so there are no architecture trade-offs to write up. The code is on
               GitHub and the README explains how it is organised.
             </p>
-            <div className="mt-6">
-              <Button href={project.repo} variant="outline" external>
-                Read the code
-              </Button>
-            </div>
+            {project.repo ? (
+              <div className="mt-6">
+                <Button href={project.repo} variant="outline" external>
+                  Read the code
+                </Button>
+              </div>
+            ) : null}
           </div>
         </Section>
       )}

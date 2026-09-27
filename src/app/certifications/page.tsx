@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/motion";
 
-import { PageHeader, Section, Tag } from "@/components/primitives";
+import { MaybeLink, PageHeader, Section, Tag } from "@/components/primitives";
 import { credentials } from "@/content/records";
 import { formatMonth } from "@/lib/utils";
 
@@ -28,12 +28,10 @@ export default function CredentialsPage() {
       <Section title="Certifications" aside={`${credentials.length} · all verifiable`}>
         <ol className="border-b border-rule">
           {credentials.map((c, i) => (
-            <li key={c.url}>
+            <li key={c.title}>
               <FadeIn delay={(i * 55) / 1000}>
-                <a
+                <MaybeLink
                   href={c.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
                   className="group grid gap-4 border-t border-rule py-8 md:grid-cols-[minmax(9rem,14vw)_1fr] md:gap-12"
                 >
                   <div>
@@ -45,18 +43,25 @@ export default function CredentialsPage() {
                   <div className="min-w-0">
                     <h3 className="font-display text-h3 transition-colors group-hover:text-signal">
                       {c.title}
-                      <span aria-hidden="true" className="ml-2 text-fg-faint">
-                        ↗
-                      </span>
+                      {c.url ? (
+                        <span aria-hidden="true" className="ml-2 text-fg-faint">
+                          ↗
+                        </span>
+                      ) : null}
                     </h3>
-                    <p className="mono mt-1 text-label text-fg-muted">{c.issuer}</p>
+                    <p className="mono mt-1 text-label text-fg-muted">
+                      {c.issuer}
+                      {!c.url && c.credentialId ? (
+                        <span className="text-fg-faint"> · ID {c.credentialId}</span>
+                      ) : null}
+                    </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {c.covers.map((s) => (
                         <Tag key={s}>{s}</Tag>
                       ))}
                     </div>
                   </div>
-                </a>
+                </MaybeLink>
               </FadeIn>
             </li>
           ))}

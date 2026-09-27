@@ -98,7 +98,7 @@ export default function ResumePage() {
         <ul className="border-b border-rule">
           {credentials.map((c) => (
             <li
-              key={c.url}
+              key={c.title}
               className="grid gap-2 border-t border-rule py-5 md:grid-cols-[minmax(9rem,14vw)_1fr] md:gap-12"
             >
               <p className="label">{formatMonth(c.issued)}</p>

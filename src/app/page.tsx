@@ -10,7 +10,7 @@ import { Parallax } from "@/components/effects";
 import { SectionRail } from "@/components/SectionRail";
 import { Testimonials } from "@/components/Testimonials";
 import { FadeIn, Magnetic, Marquee, TextReveal } from "@/components/motion";
-import { Button, Section, SpecRow } from "@/components/primitives";
+import { Button, MaybeLink, Section, SpecRow } from "@/components/primitives";
 import { featuredProjects } from "@/content/projects";
 import { credentials, roadmap, skills } from "@/content/records";
 import { bio, disciplines, links, now, person, vitals } from "@/content/site";
@@ -303,12 +303,10 @@ export default async function HomePage() {
         >
           <ul className="grid gap-px bg-rule sm:grid-cols-2 lg:grid-cols-3">
             {credentials.slice(0, 3).map((c, i) => (
-              <li key={c.url} className="surface flex">
+              <li key={c.title} className="surface flex">
                 <FadeIn delay={i * 0.07} className="flex w-full">
-                  <a
+                  <MaybeLink
                     href={c.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
                     className="group flex w-full flex-col p-6 transition-colors hover:bg-bg-sunken"
                   >
                     <span className="label">{formatMonth(c.issued)}</span>
@@ -319,7 +317,7 @@ export default async function HomePage() {
                     {c.grade ? (
                       <span className="mono mt-1 text-micro text-signal">{c.grade}</span>
                     ) : null}
-                  </a>
+                  </MaybeLink>
                 </FadeIn>
               </li>
             ))}

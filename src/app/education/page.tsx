@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/motion";
 import { PageHeader, Section, SpecRow, Tag } from "@/components/primitives";
-import { credentials, timeline } from "@/content/records";
+import { academicRecord, credentials, timeline } from "@/content/records";
 import { formatMonth, formatRange } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -47,6 +47,41 @@ export default function EducationPage() {
           "underneath everything else here."
         }
       />
+
+      <Section title="Record" aside={`${academicRecord.gpaScope} · verifiable`}>
+        <dl className="border-b border-rule">
+          <SpecRow label="Programme">
+            <span className="block text-lead">{academicRecord.programme}</span>
+            <span className="mono mt-1 block text-label text-fg-faint">
+              {academicRecord.institution} · {academicRecord.mode}
+            </span>
+          </SpecRow>
+          <SpecRow label="GPA">
+            <span className="block text-lead text-signal">{academicRecord.gpa}</span>
+            <span className="mono mt-1 block text-label text-fg-faint">
+              {academicRecord.gpaScope} ·{" "}
+              <a
+                href={academicRecord.gradeSheet}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="link-underline"
+              >
+                official grade sheet ↗
+              </a>
+            </span>
+          </SpecRow>
+          <SpecRow label="Duration">{academicRecord.span}</SpecRow>
+          <SpecRow label="Coursework">
+            <ul className="space-y-1">
+              {academicRecord.coursework.map((c) => (
+                <li key={c} className="text-body">
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </SpecRow>
+        </dl>
+      </Section>
 
       <Section title="Formal">
         <ol className="border-b border-rule">
@@ -95,18 +130,23 @@ export default function EducationPage() {
       <Section title="Alongside" aside="Verified coursework">
         <dl className="border-b border-rule">
           {credentials.map((c) => (
-            <SpecRow key={c.url} label={formatMonth(c.issued)}>
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="link-underline"
-              >
-                {c.title}
-              </a>
+            <SpecRow key={c.title} label={formatMonth(c.issued)}>
+              {c.url ? (
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="link-underline"
+                >
+                  {c.title}
+                </a>
+              ) : (
+                c.title
+              )}
               <span className="mono mt-1 block text-label text-fg-faint">
                 {c.issuer}
                 {c.grade ? ` · ${c.grade}` : ""}
+                {!c.url && c.credentialId ? ` · ID ${c.credentialId}` : ""}
               </span>
             </SpecRow>
           ))}

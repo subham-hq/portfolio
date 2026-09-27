@@ -1,18 +1,98 @@
 import type { Metadata } from "next";
+import { FadeIn } from "@/components/motion";
 import { RepoGrid } from "@/components/RepoCard";
-import { PageHeader, Button, Section, SpecRow } from "@/components/primitives";
+import { PageHeader, Button, Section, SpecRow, Tag } from "@/components/primitives";
+import {
+  mergedCount,
+  mergedProjectCount,
+  openCount,
+  upstream,
+  type Contribution,
+} from "@/content/open-source";
 import { githubUser, links } from "@/content/site";
 import { getGithubSnapshot } from "@/lib/github";
+import { formatDay } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Open source",
   description:
-    "Public repositories, languages and recent activity for Subham Bhattacharya on GitHub.",
+    `Upstream contributions by Subham Bhattacharya — ${mergedCount} merged pull requests ` +
+    `across ${mergedProjectCount} Python projects, plus public repositories and activity.`,
   alternates: { canonical: "/open-source" },
 };
 
-/** Hourly. Repository metadata does not need to be fresher, and this keeps the
- *  site comfortably inside GitHub's unauthenticated rate limit. */
+/**
+ * Contributions lead; repositories follow.
+ *
+ * The ordering is the argument. A repository is a thing you decided to publish.
+ * A merged pull request is a thing a maintainer of someone else's project read,
+ * questioned, and accepted — which is the closest public proxy for "can work on
+ * a codebase they did not write" that exists without a job title.
+ *
+ * Merged and in-review are separated rather than totalled. Overstating by one
+ * row costs the credibility of every other row on the page.
+ */
+function ContributionEntry({ contribution: c }: { contribution: Contribution }) {
+  const merged = c.state === "merged";
+
+  return (
+    <article className="grid gap-4 border-t border-rule py-8 md:grid-cols-[minmax(9rem,14vw)_1fr] md:gap-12">
+      <div>
+        <p className="label">{formatDay(c.date)}</p>
+        <p
+          className={
+            merged
+              ? "mono mt-1 text-micro text-signal"
+              : "mono mt-1 text-micro text-fg-faint"
+          }
+        >
+          {merged ? "Merged" : "In review"}
+        </p>
+      </div>
+
+      <div className="min-w-0">
+        <h4 className="font-display text-h3">
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="transition-colors hover:text-signal"
+          >
+            {c.title}
+            <span aria-hidden="true" className="ml-2 text-fg-faint">
+              ↗
+            </span>
+          </a>
+        </h4>
+
+        <p className="mono mt-1 text-label text-fg-muted">
+          PR #{c.number}
+          {c.closes ? (
+            <>
+              {" · closes "}
+              <a
+                href={c.closes.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="link-underline"
+              >
+                {c.closes.label}
+              </a>
+            </>
+          ) : null}
+        </p>
+
+        <p className="prose-measure mt-4 text-body text-fg-muted">{c.detail}</p>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {c.tags.map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export default async function OpenSourcePage() {
   const gh = await getGithubSnapshot();
@@ -23,12 +103,57 @@ export default async function OpenSourcePage() {
     <div className="shell">
       <PageHeader
         eyebrow="Open source"
-        title="Everything here is meant to be read."
+        title="Code a maintainer agreed to own."
         lede={
-          "Clean repositories, documentation written to be read, and commit histories " +
-          "that make sense. Where something is coursework, it says so."
+          `${mergedCount} pull requests merged into ${mergedProjectCount} Python projects ` +
+          `other people depend on, ${openCount} more in review. Each one below states the ` +
+          "defect, the fix, and why the distinction mattered — because the interesting " +
+          "part of a contribution is never the diff size."
         }
       />
+
+      <Section
+        title="Contributions"
+        aside={`${mergedCount} merged · ${openCount} in review`}
+      >
+        <div className="space-y-band">
+          {upstream.map((project, pi) => (
+            <FadeIn key={project.id} delay={pi * 0.06}>
+              <div>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="font-display text-h2">
+                    <a
+                      href={project.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="transition-colors hover:text-signal"
+                    >
+                      {project.name}
+                    </a>
+                  </h3>
+                  <a
+                    href={project.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mono link-underline text-label text-fg-faint"
+                  >
+                    {project.repo} ↗
+                  </a>
+                </div>
+                <p className="prose-measure mt-2 text-body text-fg-muted">
+                  {project.blurb}
+                </p>
+
+                <div className="mt-6 border-b border-rule">
+                  {project.contributions.map((c) => (
+                    <ContributionEntry key={c.number} contribution={c} />
+                  ))}
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </Section>
 
       <Section title="Profile" aside={gh.live ? "Live" : "Cached snapshot"}>
         <dl className="border-b border-rule">

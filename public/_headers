@@ -9,12 +9,14 @@
 #   style-src    stylesheets and inline styles
 #   img-src      <img>, and CSS background-image / border-image
 #   media-src    <audio> and <video>
+#   frame-src    what may be loaded INTO an <iframe> on this site
+#                (frame-ancestors is the opposite: who may frame this site)
 #   font-src     @font-face sources
 #   connect-src  fetch, XHR, WebSocket, sendBeacon
 #   form-action  where a native <form> may POST (not fetch — that is connect-src)
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self' data:; connect-src 'self' https://api.github.com https://contact-form.subham-bh.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; frame-src https://www.youtube-nocookie.com; font-src 'self' data:; connect-src 'self' https://api.github.com https://contact-form.subham-bh.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY

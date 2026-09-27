@@ -47,3 +47,18 @@ export function durationLabel(start: string, end: string): string {
   if (rest === 0) return `${years} yr`;
   return `${years} yr ${rest} mo`;
 }
+
+/**
+ * "2026-08-15" → "15 Aug 2026". Falls back to formatMonth when no day is given.
+ *
+ * Deliberately not `toLocaleDateString`: that resolves against the *runtime*
+ * locale, so the server prerender and the browser can format the same date
+ * differently and React discards the server HTML as a hydration mismatch. A
+ * fixed table has no locale to disagree about.
+ */
+export function formatDay(value: string): string {
+  const [year, month, day] = value.split("-");
+  if (!day) return formatMonth(value);
+  const name = MONTHS[Number(month) - 1];
+  return name ? `${Number(day)} ${name} ${year}` : formatMonth(value);
+}

@@ -31,11 +31,18 @@ export const timeline: TimelineEntry[] = [
     org: "Birla Institute of Technology and Science, Pilani",
     track: "systems",
     points: [
+      "Semester 1 GPA 10.00 / 10.00.",
       "Concentration in computing systems and systems programming.",
-      "Operating systems, memory management, TCP/IP and client–server architecture.",
-      "Multi-core and GPGPU programming for compute-bound workloads.",
+      "Coursework so far: Computing Systems (C, pointers, memory), Discrete Mathematics, Linear Algebra.",
+      "Ahead: operating systems, TCP/IP and client–server architecture, then multi-core and GPGPU programming.",
     ],
-    tags: ["Operating Systems", "Networks", "HPC", "C++", "Java", "Python"],
+    tags: [
+      "Computing Systems",
+      "Discrete Mathematics",
+      "Linear Algebra",
+      "Operating Systems",
+      "Networks",
+    ],
   },
   {
     id: "backend",
@@ -45,11 +52,41 @@ export const timeline: TimelineEntry[] = [
     org: "Independent",
     track: "systems",
     points: [
-      "Structured path through Python internals, typing, data structures and algorithms.",
+      "Structured path through Python internals, typing, concurrency, data structures and algorithms.",
       "Shipped OrderFlow: multi-tenant order management with enforced tenant isolation.",
-      "Working toward typed, testable pipeline code — Protocols at interfaces, strict mypy throughout.",
+      "Building site-auditor: concurrent crawler with bounded, rate-limited async I/O under mypy --strict.",
+      "Typed by default — Protocols at the interfaces, strict mypy across everything new.",
     ],
-    tags: ["Python", "Flask", "SQL", "mypy", "Git"],
+    tags: ["Python", "Flask", "FastAPI", "asyncio", "mypy", "pytest", "Git"],
+  },
+  {
+    id: "oss",
+    start: "2026-08",
+    end: "present",
+    title: "Open-source contributor — Python ecosystem",
+    org: "Litestar · Strawberry GraphQL · KubeEdge Ianvs",
+    track: "systems",
+    points: [
+      "Three pull requests merged into two widely used Python projects, reviewed by core maintainers.",
+      "Litestar: corrected HTTP semantics for multipart part-limit violations — 413 in place of 400, with regression tests and a breaking-change note.",
+      "Strawberry GraphQL: corrected PEP 681 dataclass_transform metadata so static type-checker behaviour matches runtime.",
+      "Two further fixes in review upstream on KubeEdge Ianvs, a CNCF edge-AI benchmarking framework.",
+    ],
+    tags: ["Python", "HTTP semantics", "PEP 681", "mypy", "pytest", "Code review"],
+  },
+  {
+    id: "sih",
+    start: "2026-09",
+    end: "2026-09",
+    title: "Team lead — Smart India Hackathon 2026",
+    org: "Team Return-Path · problem statement SIH26106",
+    track: "systems",
+    points: [
+      "Led six engineers building Postmark, an email threat detection and forensic intelligence platform.",
+      "Owned the backend: FastAPI service, PostgreSQL schema and access layer.",
+      "Set the test suite and branch-and-review workflow the team shipped against.",
+    ],
+    tags: ["FastAPI", "PostgreSQL", "Async", "Team lead"],
   },
   {
     id: "cs50",
@@ -88,7 +125,7 @@ export const timeline: TimelineEntry[] = [
     track: "operations",
     location: "West Bengal, India",
     points: [
-      "Operations, distribution and supply for poultry and livestock products.",
+      "Operations, distribution and supply for animal health and livestock products.",
       "Coordination across production, supply chain and distribution.",
     ],
     tags: ["Operations", "Supply Chain", "Distribution"],
@@ -133,10 +170,11 @@ export const roadmap: RoadmapStage[] = [
   {
     phase: "03",
     title: "Systems and concurrency",
-    state: "next",
+    state: "current",
     detail:
-      "asyncio, queues, caching and the failure behaviour of distributed components. " +
-      "Formalised alongside the systems track at BITS.",
+      "asyncio in anger: bounded concurrency, rate limiting, retries with jitter and " +
+      "timeouts, behind Protocol-defined interfaces. Shipping in site-auditor and in " +
+      "the FastAPI service behind Postmark.",
   },
   {
     phase: "04",
@@ -144,7 +182,106 @@ export const roadmap: RoadmapStage[] = [
     state: "next",
     detail:
       "Serving, evaluation, data pipelines and the infrastructure models actually run on — " +
-      "the backend problem, with a harder correctness story.",
+      "the backend problem, with a harder correctness story. Started from the " +
+      "infrastructure side: upstream work on a CNCF edge-AI benchmarking framework.",
+  },
+];
+
+/* ────────────────────────────────────────────────────── academic record ── */
+
+/**
+ * A grade is only worth publishing if a reader can check it, which is why
+ * `gradeSheet` is not optional here. "10.00 GPA" with no link is a claim;
+ * "10.00 GPA" beside the issuing document is a fact.
+ */
+export const academicRecord = {
+  programme: "BSc (Hons) Computer Science",
+  institution: "Birla Institute of Technology and Science, Pilani",
+  mode: "Digital Learning Division · online",
+  span: "Mar 2026 — Mar 2030",
+  gpa: "10.00 / 10.00",
+  gpaScope: "Semester 1",
+  gradeSheet:
+    "https://drive.google.com/file/d/1cmoGGjo0JJqvOfm7dNUd6ReuAp0rZw04/view?usp=sharing",
+  coursework: [
+    "Introduction to Computing Systems — C, pointers, memory",
+    "Discrete Mathematics",
+    "Linear Algebra & Optimisation",
+  ],
+} as const;
+
+/* ────────────────────────────────────────────────────── ai trajectory ──── */
+
+/**
+ * Evidence for the AI direction, and nothing that is not evidence.
+ *
+ * The temptation on a page like this is to list what you intend to learn and
+ * let the reader mistake it for what you have done. `state` exists to make
+ * that impossible: "shipped" means there is something to open, "active" means
+ * it is underway and unfinished, "planned" means it has not started. A
+ * reviewer who can see the difference at a glance trusts the whole page more,
+ * not less.
+ */
+export interface AiMilestone {
+  title: string;
+  org: string;
+  state: "shipped" | "active" | "planned";
+  detail: string;
+  href?: string;
+}
+
+export const aiTrajectory: AiMilestone[] = [
+  {
+    title: "KubeEdge Ianvs — upstream fixes",
+    org: "CNCF · distributed synergy AI benchmarking",
+    state: "active",
+    detail:
+      "Two fixes in review on the framework CNCF uses to benchmark edge–cloud " +
+      "collaborative learning: a dataset-config parser that silently swallowed " +
+      "unknown keys, and an error message that named a filename the loader does " +
+      "not look for. Both are infrastructure defects rather than model work — " +
+      "which is the layer of AI systems I am aiming at.",
+    href: "/open-source",
+  },
+  {
+    title: "Postmark — the service layer around a classifier",
+    org: "Smart India Hackathon 2026 · team lead",
+    state: "shipped",
+    detail:
+      "Owned the backend for an ML-backed email threat detection platform: async " +
+      "FastAPI request handling, the PostgreSQL schema holding the evidence behind " +
+      "each verdict, and the boundary between the API and the model. The model was " +
+      "not mine. Everything it needed in order to be useful was.",
+    href: "/projects/postmark",
+  },
+  {
+    title: "site-auditor — concurrency under real limits",
+    org: "Self-directed",
+    state: "active",
+    detail:
+      "Bounded concurrency, rate limiting, retries with jitter and Protocol-defined " +
+      "interfaces. Inference serving and data pipelines are the same problem with " +
+      "more expensive units of work, so this is the prerequisite rather than a " +
+      "detour.",
+    href: "/projects/site-auditor",
+  },
+  {
+    title: "CS50 AI with Python",
+    org: "Harvard University · edX",
+    state: "active",
+    detail:
+      "Search, knowledge representation, optimisation, learning and neural " +
+      "networks. In progress — listed here as in progress, not as a credential.",
+  },
+  {
+    title: "Karpathy's neural networks series, then Stanford CS336",
+    org: "Planned · after the backend track",
+    state: "planned",
+    detail:
+      "Building a language model from scratch, then the systems course on how one " +
+      "is actually trained and served. Deliberately sequenced after backend " +
+      "employability rather than in parallel with it: two half-finished tracks " +
+      "are worth less than one finished one.",
   },
 ];
 
@@ -155,11 +292,25 @@ export interface Credential {
   issuer: string;
   issued: string;
   grade?: string;
-  url: string;
+  /**
+   * Public verification link. Optional, because some issuers hand you a
+   * credential ID and no public URL — and inventing a link that 404s is a
+   * worse failure than showing the ID and letting a reviewer verify it their
+   * own way. Where `url` is absent, `credentialId` renders instead.
+   */
+  url?: string;
+  credentialId?: string;
   covers: string[];
 }
 
 export const credentials: Credential[] = [
+  {
+    title: "Inclusive Open Source Community Orientation (LFC102)",
+    issuer: "The Linux Foundation",
+    issued: "2026-08",
+    credentialId: "LF-i2mlam8vod",
+    covers: ["Open source", "Community norms", "Contribution etiquette", "Code review"],
+  },
   {
     title: "CS50x: Introduction to Computer Science",
     issuer: "Harvard University · edX",
@@ -234,9 +385,8 @@ export const skills: SkillGroup[] = [
       { name: "Python", depth: "core" },
       { name: "SQL", depth: "proficient" },
       { name: "C", depth: "proficient" },
-      { name: "JavaScript", depth: "working" },
-      { name: "C++", depth: "working" },
-      { name: "Java", depth: "working" },
+      { name: "TypeScript", depth: "working" },
+      { name: "HTML / CSS", depth: "working" },
     ],
   },
   {
@@ -244,12 +394,44 @@ export const skills: SkillGroup[] = [
     note: "Where most of my time goes.",
     items: [
       { name: "REST API design", depth: "core" },
+      { name: "HTTP semantics", depth: "core" },
       { name: "Flask", depth: "core" },
-      { name: "Data modelling", depth: "proficient" },
-      { name: "Authentication & sessions", depth: "proficient" },
-      { name: "Password hashing", depth: "proficient" },
-      { name: "Multi-tenant architecture", depth: "proficient" },
+      { name: "FastAPI", depth: "proficient" },
+      { name: "PostgreSQL", depth: "proficient" },
       { name: "SQLite / relational design", depth: "proficient" },
+      { name: "Data modelling", depth: "proficient" },
+      { name: "Multi-tenant architecture", depth: "proficient" },
+      { name: "Session authentication & RBAC", depth: "proficient" },
+      { name: "Password hashing & CSRF protection", depth: "proficient" },
+      { name: "Jinja2", depth: "working" },
+    ],
+  },
+  {
+    group: "Async & concurrency",
+    note: "Built into site-auditor and the service layer behind Postmark.",
+    items: [
+      { name: "asyncio", depth: "proficient" },
+      { name: "httpx", depth: "proficient" },
+      { name: "Bounded concurrency", depth: "proficient" },
+      { name: "Retries, backoff & jitter", depth: "proficient" },
+      { name: "Timeouts", depth: "proficient" },
+      { name: "Per-host rate limiting", depth: "proficient" },
+      { name: "robots.txt compliance", depth: "working" },
+    ],
+  },
+  {
+    group: "Typing, testing & quality",
+    note: "The things that decide whether code survives contact with a second reader.",
+    items: [
+      { name: "mypy --strict", depth: "core" },
+      { name: "Protocols & structural typing", depth: "core" },
+      { name: "Generics", depth: "proficient" },
+      { name: "Dataclasses", depth: "proficient" },
+      { name: "Decorators, generators & context managers", depth: "proficient" },
+      { name: "pytest & regression testing", depth: "proficient" },
+      { name: "ruff / ESLint", depth: "proficient" },
+      { name: "Pre-commit hooks & CI", depth: "proficient" },
+      { name: "Code review", depth: "proficient" },
     ],
   },
   {
@@ -259,20 +441,26 @@ export const skills: SkillGroup[] = [
       { name: "Data structures", depth: "proficient" },
       { name: "Algorithms & graph search", depth: "proficient" },
       { name: "Memory management", depth: "proficient" },
+      { name: "Discrete mathematics", depth: "working" },
+      { name: "Linear algebra", depth: "working" },
       { name: "Operating systems", depth: "working" },
       { name: "TCP/IP & client–server", depth: "working" },
-      { name: "Concurrency", depth: "working" },
     ],
   },
   {
-    group: "Engineering practice",
-    note: "The things that decide whether code survives contact with a second reader.",
+    group: "Infrastructure & web",
+    note: "Enough to ship and operate what I build, without claiming to be an SRE.",
     items: [
-      { name: "Type annotations & mypy", depth: "proficient" },
       { name: "Git / GitHub", depth: "proficient" },
-      { name: "Debugging", depth: "proficient" },
-      { name: "Testing", depth: "working" },
-      { name: "Technical writing", depth: "proficient" },
+      { name: "GitHub Actions", depth: "proficient" },
+      { name: "Linux & Bash", depth: "proficient" },
+      { name: "Cloudflare Pages / Workers", depth: "proficient" },
+      { name: "Content-Security-Policy", depth: "proficient" },
+      { name: "uv", depth: "working" },
+      { name: "GraphQL", depth: "working" },
+      { name: "Next.js & React", depth: "working" },
+      { name: "Tailwind CSS", depth: "working" },
+      { name: "Zod", depth: "working" },
     ],
   },
 ];

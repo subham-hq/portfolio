@@ -106,6 +106,32 @@ export function Button({
   );
 }
 
+/**
+ * An external link when there is somewhere to go, and the same box without the
+ * anchor semantics when there is not.
+ *
+ * Exists because `<a href={undefined}>` still renders an <a>: focusable, in the
+ * tab order, announced as a link by a screen reader, and doing nothing when
+ * activated. A credential with no public verification URL should render as
+ * text, not as a link that lies.
+ */
+export function MaybeLink({
+  href,
+  className,
+  children,
+}: {
+  href?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (!href) return <div className={className}>{children}</div>;
+  return (
+    <a href={href} target="_blank" rel="noreferrer noopener" className={className}>
+      {children}
+    </a>
+  );
+}
+
 export function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="mono rounded-xs border border-rule px-2 py-0.5 text-micro text-fg-faint">

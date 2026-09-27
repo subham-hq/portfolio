@@ -6,6 +6,8 @@
  * updating the site never means editing JSX.
  */
 
+import { mergedCount, mergedProjectCount } from "./open-source";
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
   "https://subhambhattacharya.com";
@@ -15,8 +17,8 @@ export const person = {
   shortName: "Subham",
   role: "Backend Engineer",
   target: "AI/ML Systems",
-  location: "West Bengal, India",
-  coords: "22.6708° N · 87.3200° E",
+  location: "Kolkata, West Bengal",
+  coords: "22.5726° N · 88.3639° E",
   timezone: "Asia/Kolkata",
   utcOffset: "UTC+05:30",
   email: "hello@subhambhattacharya.com",
@@ -114,14 +116,18 @@ export const bio = {
       "documentation, and projects I can stand behind in a technical conversation.",
   ],
 
+  /* Written for crawlers and link previews rather than for a reader, so they
+     lead with the hardest verifiable fact — merged upstream work — instead of
+     with narrative. */
   metaDescription:
-    "Subham Bhattacharya — backend engineer working in Python. APIs, data models and " +
-    "service logic. CS at BITS Pilani. Building toward AI/ML systems.",
+    "Subham Bhattacharya — backend engineer working in Python. Merged contributions " +
+    "to Litestar and Strawberry GraphQL, multi-tenant systems, async services. " +
+    "CS at BITS Pilani. Building toward AI/ML systems.",
 
   ogDescription:
-    "Backend engineer working in Python. Multi-tenant systems, typed service code and " +
-    "CS fundamentals — reached engineering from four years running manufacturing " +
-    "operations. Studying Computer Science at BITS Pilani.",
+    "Backend engineer working in Python. Three merged pull requests in widely used " +
+    "Python projects, multi-tenant architecture, FastAPI and asyncio under strict " +
+    "typing. Studying Computer Science at BITS Pilani.",
 } as const;
 
 /* ─────────────────────────────────────────────────────────── hero figures ── */
@@ -131,20 +137,37 @@ export const bio = {
  * is worse than no statistic — it invites the reviewer to discount the rest.
  */
 export const figures = [
+  {
+    /* Derived, so it cannot drift out of step with the contributions page.
+       This replaced a certificate count: three pull requests a maintainer
+       chose to merge carry more weight with an engineer than six
+       certificates, and the certificates are one click away regardless. */
+    value: String(mergedCount).padStart(2, "0"),
+    unit: "merged",
+    label: `pull requests accepted upstream across ${mergedProjectCount} Python projects`,
+  },
+  {
+    value: "10",
+    unit: "/ 10 GPA",
+    label: "BSc Computer Science, BITS Pilani — semester one",
+  },
   { value: "04", unit: "yrs", label: "owning production, procurement and finance" },
-  { value: "06", unit: "certs", label: "verified — Harvard, Michigan, HackerRank" },
-  { value: "BITS", unit: "Pilani", label: "BSc Computer Science, 2026–2030" },
 ] as const;
 
 /** Scrolling marquee under the hero. Disciplines, not buzzwords. */
 export const disciplines = [
   "Python",
   "REST API design",
+  "FastAPI",
   "Data modelling",
+  "PostgreSQL",
   "Authentication",
   "Multi-tenant architecture",
+  "asyncio",
+  "Bounded concurrency",
   "SQL",
   "Type-driven design",
+  "Open source",
   "C",
   "Graph search",
   "Operating systems",
@@ -159,12 +182,12 @@ export const vitals = [
   {
     key: "Currently",
     value: "Backend engineer",
-    detail: "Python · Flask · SQL · typed service code",
+    detail: "Python · Flask · FastAPI · PostgreSQL · async service code",
   },
   {
     key: "Studying",
     value: "BSc Computer Science",
-    detail: "BITS Pilani · computing systems track",
+    detail: "BITS Pilani · computing systems track · 10.00 GPA",
   },
   {
     key: "Based in",
@@ -181,17 +204,22 @@ export const vitals = [
 /** The "Now" block. A stale entry here is worse than an empty one — it tells a
  *  reader the site was abandoned. Review it monthly. */
 export const now = {
-  updated: "2026-07",
+  updated: "2026-09",
   entries: [
     {
       key: "Building",
-      label: "Typed pipeline code",
-      detail: "Protocols at the interfaces, strict mypy across all of it",
+      label: "site-auditor",
+      detail: "Concurrent crawler — bounded async I/O under mypy --strict",
+    },
+    {
+      key: "Contributing",
+      label: "KubeEdge Ianvs",
+      detail: "CNCF edge-AI benchmarking · two fixes in review",
     },
     {
       key: "Learning",
-      label: "Concurrency in Python",
-      detail: "asyncio, queues, and what actually blocks",
+      label: "CS50 AI with Python",
+      detail: "Search, optimisation, learning — in progress",
     },
     {
       key: "Reading",
@@ -200,8 +228,8 @@ export const now = {
     },
     {
       key: "Last shipped",
-      label: "OrderFlow",
-      detail: "Multi-tenant order management · CS50x final project",
+      label: "Postmark",
+      detail: "Email threat detection · team lead, backend owner · SIH 2026",
     },
   ],
 } as const;
@@ -251,7 +279,9 @@ export const footerNav = {
     { href: "/ai-journey", label: "AI journey" },
   ],
   Detail: [
-    { href: "/skills", label: "Skills" },
+    /* There is no /skills route, and there should not be: /tech-stack already
+       carries the declared-depth table. A footer entry pointing at a 404 was
+       shipping on every page of the site. */
     { href: "/tech-stack", label: "Tech stack" },
     { href: "/certifications", label: "Certifications" },
     { href: "/resume", label: "Résumé" },

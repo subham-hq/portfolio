@@ -29,19 +29,25 @@ export const faqs: Faq[] = [
   {
     question: "You have no commercial software experience. Why hire you?",
     answer:
-      "Correct. What I have instead is four years of owning " +
-      "outcomes in a system where mistakes cost money the same week they happen — " +
-      "production, quality, procurement, finance. That is where the instinct to " +
-      "design for failure first comes from. The engineering judgement is visible in " +
-      "the repositories: read the OrderFlow case study and decide for yourself.",
+      "Correct, and I would not argue the point. What I would offer instead is " +
+      "three pull requests merged into Litestar and Strawberry GraphQL — libraries " +
+      "other people ship on — each reviewed by a maintainer who had no reason to be " +
+      "generous. That is the closest public evidence there is of working inside a " +
+      "codebase I did not write, to someone else's standard. Underneath it sits " +
+      "four years of owning outcomes in a system where mistakes cost money the same " +
+      "week they happen, which is where the instinct to design for failure first " +
+      "comes from.",
   },
   {
     question: "How much of your GitHub is real work versus coursework?",
     answer:
-      "One system and four study repositories, and the site says which is which. " +
-      "OrderFlow is designed work with trade-offs I can walk through end to end. The " +
-      "rest is deliberate practice in Python internals, C and algorithms — real code, " +
-      "categorised for what it is.",
+      "Three systems and four study repositories, and the site labels which is " +
+      "which. The systems have trade-offs I can walk through end to end: OrderFlow, " +
+      "Postmark and site-auditor. The rest is deliberate practice in Python " +
+      "internals, C and algorithms — real code, categorised for what it is rather " +
+      "than dressed up as product work. The upstream contributions are the part I " +
+      "would look at first, and they are not on my GitHub at all: they are in other " +
+      "people's repositories.",
   },
   {
     question: "Are you available while studying and running the business?",
@@ -53,7 +59,7 @@ export const faqs: Faq[] = [
   {
     question: "Remote, hybrid or relocation?",
     answer:
-      "All three. I am in West Bengal, UTC+05:30, which overlaps a full working day " +
+      "All three. I am near Kolkata, UTC+05:30, which overlaps a full working day " +
       "with EMEA and most of the morning with US Eastern. I am open to relocation " +
       "for the right team.",
   },
@@ -67,8 +73,10 @@ export const faqs: Faq[] = [
   {
     question: "What are you weakest at right now?",
     answer:
-      "Testing discipline and production operations. I can build the system; I have " +
-      "not yet maintained one under real traffic with someone paging me at 3am. " +
+      "Production operations. I can build the system and I have started writing the " +
+      "tests that hold it — the upstream work shipped with regression coverage " +
+      "because a maintainer would not have taken it otherwise. What I have not done " +
+      "is keep something alive under real traffic with someone paging me at 3am. " +
       "That is the experience I am looking for a team to give me, and it is the " +
       "first thing I would want to be held to a standard on.",
   },

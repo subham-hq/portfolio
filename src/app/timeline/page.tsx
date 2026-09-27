@@ -35,7 +35,10 @@ export default function TimelinePage() {
       track: e.track,
     })),
     ...credentials.map((c) => ({
-      id: c.url,
+      // Titles, not URLs: a credential may have no public verification link,
+      // and a React key of `undefined` silently degrades to index-based
+      // reconciliation on a list this page re-sorts.
+      id: c.title,
       when: formatMonth(c.issued),
       sort: c.issued,
       title: c.title,

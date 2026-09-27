@@ -18,15 +18,17 @@ export default function ProjectsPage() {
     <div className="shell">
       <PageHeader
         eyebrow="Projects"
-        title="One system. Four studies."
+        title="Three systems. Four studies."
         lede={
-          "OrderFlow is designed work: a multi-tenant architecture with the trade-offs " +
-          "written up end to end. The study repositories are deliberate practice in " +
-          "Python internals, C and graph algorithms, and they say so."
+          "The systems are designed work with the trade-offs written up end to end: a " +
+          "multi-tenant order platform, a team-built threat detection service, and a " +
+          "concurrent crawler built around its own limits. The study repositories are " +
+          "deliberate practice in Python internals, C and graph algorithms, and they " +
+          "say so."
         }
       />
 
-      <Section title="Systems" aside={`${systemProjects.length} project`}>
+      <Section title="Systems" aside={`${systemProjects.length} projects`}>
         <ul className="border-b border-rule">
           {systemProjects.map((project, i) => (
             <li key={project.slug}>
