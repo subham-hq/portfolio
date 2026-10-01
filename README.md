@@ -48,29 +48,6 @@ Import the repo. Everything is detected; set `NEXT_PUBLIC_SITE_URL` and deploy.
 
 ---
 
-## Do this before you ship
-
-Three things are deliberately left for you. None of them block a deploy; all of
-them are visible to a reviewer.
-
-1. **Connect the contact form.** Create a free Resend account, verify a domain,
-   and set `RESEND_API_KEY`, `CONTACT_TO_EMAIL` and `CONTACT_FROM_EMAIL` in
-   Vercel. About five minutes. Until then the form validates and then tells the
-   visitor to email directly, with a copy-to-clipboard button — it never
-   silently swallows a message, but it also isn't delivering one.
-2. **Rewrite the copy in `src/content/site.ts`.** Every string under `bio` is a
-   draft written from your LinkedIn and GitHub bios. It keeps your rhythm, but
-   it is not your voice, and a technical reader can hear the difference. See
-   [docs/CONTENT.md](docs/CONTENT.md).
-3. **Rewrite `src/content/faq.ts` in your own voice.** Seven recruiter objections, answered. Structure is right; the sentences are mine, not yours.
-4. **Add `public/subham-bhattacharya-resume.pdf`.** Four links point at it.
-   Until it exists they 404.
-5. **Add the images listed in [docs/ASSETS.md](docs/ASSETS.md).** The site works
-   without them; the OG card is generated, so nothing is broken, but a portrait
-   makes the About page land harder.
-
----
-
 ## Architecture
 
 ```
